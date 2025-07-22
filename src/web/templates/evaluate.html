@@ -1,0 +1,454 @@
+{% extends "base.html" %}
+
+{% block title %}Run Evaluation - LLM Coding Evaluation Platform{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-bold text-gray-900 mb-4">Configure Evaluation</h1>
+            <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                Set up your models and evaluation parameters to start comprehensive code generation benchmarking.
+            </p>
+        </div>
+
+        <!-- Evaluation Form -->
+        <div x-data="evaluationForm()" class="bg-white shadow-lg rounded-xl p-8">
+            <form @submit.prevent="startEvaluation()">
+                <!-- Model Configuration Section -->
+                <div class="mb-12">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-2xl font-bold text-gray-900">Model Configuration</h2>
+                        <button type="button" @click="addModel()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors">
+                            Add Model
+                        </button>
+                    </div>
+
+                    <!-- Model Cards -->
+                    <div class="space-y-6">
+                        <template x-for="(model, index) in models" :key="index">
+                            <div class="border border-gray-200 rounded-lg p-6 relative">
+                                <!-- Remove Button -->
+                                <button type="button" @click="removeModel(index)" 
+                                        x-show="models.length > 1"
+                                        class="absolute top-4 right-4 text-red-500 hover:text-red-700">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                                    </svg>
+                                </button>
+
+                                <div class="grid md:grid-cols-2 gap-6">
+                                    <!-- Basic Info -->
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Model Name</label>
+                                        <input type="text" x-model="model.name" 
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                               placeholder="e.g., CodeLlama 7B" required>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Provider</label>
+                                        <select x-model="model.provider" @change="updateModelDefaults(index)"
+                                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500" required>
+                                            <option value="">Select Provider</option>
+                                            <option value="ollama">Ollama (Local)</option>
+                                            <option value="openai">OpenAI</option>
+                                            <option value="anthropic">Anthropic</option>
+                                            <option value="huggingface">HuggingFace</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Model ID</label>
+                                        <input type="text" x-model="model.model_name"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                               placeholder="e.g., codellama:7b" required>
+                                    </div>
+
+                                    <div x-show="model.provider === 'ollama'">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Base URL</label>
+                                        <input type="url" x-model="model.base_url"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                               placeholder="http://localhost:11434">
+                                    </div>
+
+                                    <div x-show="['openai', 'anthropic', 'huggingface'].includes(model.provider)">
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">API Key</label>
+                                        <input type="password" x-model="model.api_key"
+                                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                               placeholder="Enter API key">
+                                    </div>
+
+                                    <!-- Advanced Settings Toggle -->
+                                    <div class="md:col-span-2">
+                                        <button type="button" @click="model.showAdvanced = !model.showAdvanced"
+                                                class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                                            <span x-text="model.showAdvanced ? 'Hide' : 'Show'"></span> Advanced Settings
+                                        </button>
+                                    </div>
+
+                                    <!-- Advanced Settings -->
+                                    <div x-show="model.showAdvanced" class="md:col-span-2 grid md:grid-cols-2 gap-4 pt-4 border-t">
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-2">Temperature</label>
+                                            <input type="number" x-model="model.temperature" min="0" max="2" step="0.1"
+                                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm font-medium text-gray-700 mb-2">Max Tokens</label>
+                                            <input type="number" x-model="model.max_tokens" min="1" max="8192"
+                                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                        </div>
+                                    </div>
+
+                                    <!-- Test Connection -->
+                                    <div class="md:col-span-2">
+                                        <button type="button" @click="testConnection(index)"
+                                                :disabled="isTestingConnection"
+                                                class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors disabled:opacity-50">
+                                            <span x-show="!isTestingConnection">Test Connection</span>
+                                            <span x-show="isTestingConnection">Testing...</span>
+                                        </button>
+                                        <div x-show="model.connectionStatus" class="mt-2 text-sm" 
+                                             :class="model.connectionStatus.success ? 'text-green-600' : 'text-red-600'">
+                                            <span x-text="model.connectionStatus.message"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Evaluation Settings Section -->
+                <div class="mb-12">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Evaluation Settings</h2>
+                    
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <!-- Task Types -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-3">Task Types</label>
+                            <div class="space-y-2">
+                                <template x-for="taskType in taskTypes" :key="taskType">
+                                    <label class="flex items-center">
+                                        <input type="checkbox" x-model="selectedTaskTypes" :value="taskType"
+                                               class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                        <span class="ml-2 text-gray-700 capitalize" x-text="taskType"></span>
+                                    </label>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Difficulty Levels -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-3">Difficulty Levels</label>
+                            <div class="space-y-2">
+                                <template x-for="difficulty in difficultyLevels" :key="difficulty">
+                                    <label class="flex items-center">
+                                        <input type="checkbox" x-model="selectedDifficulties" :value="difficulty"
+                                               class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                        <span class="ml-2 text-gray-700 capitalize" x-text="difficulty"></span>
+                                    </label>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Additional Settings -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Max Tasks per Type</label>
+                            <input type="number" x-model="maxTasksPerType" min="1" max="20"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div class="space-y-4">
+                            <label class="flex items-center">
+                                <input type="checkbox" x-model="includeBigCodeBench"
+                                       class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                <span class="ml-2 text-gray-700">Include BigCodeBench Evaluation</span>
+                            </label>
+
+                            <label class="flex items-center">
+                                <input type="checkbox" x-model="parallelExecution"
+                                       class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                                <span class="ml-2 text-gray-700">Parallel Execution</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Estimated Time -->
+                <div class="mb-8 p-4 bg-blue-50 rounded-lg">
+                    <div class="flex items-center space-x-2 text-blue-800">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span class="font-medium">Estimated Time:</span>
+                        <span x-text="estimatedTime"></span>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="flex justify-center">
+                    <button type="submit" :disabled="isRunning || !canStartEvaluation"
+                            class="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 py-3 rounded-lg font-semibold text-lg hover:from-blue-700 hover:to-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span x-show="!isRunning">Start Evaluation</span>
+                        <span x-show="isRunning">Starting Evaluation...</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Quick Start Templates -->
+        <div class="mt-12">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Quick Start Templates</h2>
+            <div class="grid md:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
+                     @click="loadTemplate('local')">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Local Models</h3>
+                    <p class="text-gray-600 text-sm mb-4">Evaluate 3 popular local models via Ollama</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">CodeLlama</span>
+                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">DeepSeek</span>
+                        <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">Qwen2.5</span>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
+                     @click="loadTemplate('api')">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">API Models</h3>
+                    <p class="text-gray-600 text-sm mb-4">Compare GPT-4 and Claude 3</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">GPT-4</span>
+                        <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">Claude 3</span>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
+                     @click="loadTemplate('quick')">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Quick Test</h3>
+                    <p class="text-gray-600 text-sm mb-4">Fast evaluation with easy tasks only</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs">Easy Tasks</span>
+                        <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs">2 Tasks/Type</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+function evaluationForm() {
+    return {
+        models: [
+            {
+                name: '',
+                provider: '',
+                model_name: '',
+                base_url: 'http://localhost:11434',
+                api_key: '',
+                temperature: 0.1,
+                max_tokens: 4096,
+                showAdvanced: false,
+                connectionStatus: null
+            }
+        ],
+        taskTypes: {{ task_types | tojsonfilter }},
+        difficultyLevels: {{ difficulty_levels | tojsonfilter }},
+        selectedTaskTypes: ['frontend', 'backend'],
+        selectedDifficulties: ['easy', 'medium'],
+        maxTasksPerType: 5,
+        includeBigCodeBench: false,
+        parallelExecution: false,
+        isRunning: false,
+        isTestingConnection: false,
+
+        get estimatedTime() {
+            const totalTasks = this.selectedTaskTypes.length * this.maxTasksPerType;
+            const totalModels = this.models.length;
+            const baseTime = totalTasks * totalModels * 30; // 30 seconds per task
+            const minutes = Math.ceil(baseTime / 60);
+            return `${minutes} minutes`;
+        },
+
+        get canStartEvaluation() {
+            return this.models.length > 0 && 
+                   this.models.every(m => m.name && m.provider && m.model_name) &&
+                   this.selectedTaskTypes.length > 0 &&
+                   this.selectedDifficulties.length > 0;
+        },
+
+        addModel() {
+            this.models.push({
+                name: '',
+                provider: '',
+                model_name: '',
+                base_url: 'http://localhost:11434',
+                api_key: '',
+                temperature: 0.1,
+                max_tokens: 4096,
+                showAdvanced: false,
+                connectionStatus: null
+            });
+        },
+
+        removeModel(index) {
+            this.models.splice(index, 1);
+        },
+
+        updateModelDefaults(index) {
+            const model = this.models[index];
+            const defaults = {
+                ollama: {
+                    base_url: 'http://localhost:11434',
+                    model_name: 'codellama:7b'
+                },
+                openai: {
+                    model_name: 'gpt-4-turbo-preview'
+                },
+                anthropic: {
+                    model_name: 'claude-3-sonnet-20240229'
+                },
+                huggingface: {
+                    model_name: 'bigcode/starcoder'
+                }
+            };
+
+            if (defaults[model.provider]) {
+                Object.assign(model, defaults[model.provider]);
+            }
+        },
+
+        async testConnection(index) {
+            this.isTestingConnection = true;
+            const model = this.models[index];
+            
+            try {
+                const params = new URLSearchParams({
+                    provider: model.provider,
+                    model_name: model.model_name
+                });
+                
+                if (model.base_url) params.append('base_url', model.base_url);
+                if (model.api_key) params.append('api_key', model.api_key);
+                
+                const response = await fetch(`/api/models/test?${params}`);
+                const result = await response.json();
+                
+                model.connectionStatus = result;
+            } catch (error) {
+                model.connectionStatus = {
+                    success: false,
+                    message: `Connection failed: ${error.message}`
+                };
+            } finally {
+                this.isTestingConnection = false;
+            }
+        },
+
+        async startEvaluation() {
+            if (!this.canStartEvaluation) return;
+            
+            this.isRunning = true;
+            
+            try {
+                const payload = {
+                    model_configs: this.models.map(m => ({
+                        name: m.name,
+                        provider: m.provider,
+                        model_name: m.model_name,
+                        base_url: m.base_url || null,
+                        api_key: m.api_key || null,
+                        temperature: parseFloat(m.temperature),
+                        max_tokens: parseInt(m.max_tokens)
+                    })),
+                    task_types: this.selectedTaskTypes,
+                    difficulty_levels: this.selectedDifficulties,
+                    max_tasks_per_type: parseInt(this.maxTasksPerType),
+                    include_bigcodebench: this.includeBigCodeBench,
+                    parallel_execution: this.parallelExecution
+                };
+                
+                const response = await fetch('/api/evaluate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('Evaluation started successfully!', 'success');
+                    // Redirect to dashboard to monitor progress
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 1500);
+                } else {
+                    throw new Error(result.message || 'Failed to start evaluation');
+                }
+                
+            } catch (error) {
+                showNotification(`Error: ${error.message}`, 'error');
+            } finally {
+                this.isRunning = false;
+            }
+        },
+
+        loadTemplate(type) {
+            const templates = {
+                local: {
+                    models: [
+                        { name: 'CodeLlama 7B', provider: 'ollama', model_name: 'codellama:7b', base_url: 'http://localhost:11434' },
+                        { name: 'DeepSeek Coder 6.7B', provider: 'ollama', model_name: 'deepseek-coder:6.7b', base_url: 'http://localhost:11434' },
+                        { name: 'Qwen2.5 Coder 7B', provider: 'ollama', model_name: 'qwen2.5-coder:7b', base_url: 'http://localhost:11434' }
+                    ],
+                    settings: {
+                        selectedTaskTypes: ['frontend', 'backend', 'testing'],
+                        selectedDifficulties: ['easy', 'medium'],
+                        maxTasksPerType: 3
+                    }
+                },
+                api: {
+                    models: [
+                        { name: 'GPT-4 Turbo', provider: 'openai', model_name: 'gpt-4-turbo-preview' },
+                        { name: 'Claude 3 Sonnet', provider: 'anthropic', model_name: 'claude-3-sonnet-20240229' }
+                    ],
+                    settings: {
+                        selectedTaskTypes: ['frontend', 'backend'],
+                        selectedDifficulties: ['easy', 'medium', 'hard'],
+                        maxTasksPerType: 5
+                    }
+                },
+                quick: {
+                    models: [
+                        { name: 'CodeLlama 7B', provider: 'ollama', model_name: 'codellama:7b', base_url: 'http://localhost:11434' }
+                    ],
+                    settings: {
+                        selectedTaskTypes: ['frontend', 'backend'],
+                        selectedDifficulties: ['easy'],
+                        maxTasksPerType: 2
+                    }
+                }
+            };
+
+            const template = templates[type];
+            if (template) {
+                this.models = template.models.map(m => ({
+                    ...m,
+                    temperature: 0.1,
+                    max_tokens: 4096,
+                    showAdvanced: false,
+                    connectionStatus: null
+                }));
+                Object.assign(this, template.settings);
+            }
+        }
+    }
+}
+</script>
+{% endblock %}

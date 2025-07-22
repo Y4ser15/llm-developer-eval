@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+
+{% block title %}LLM Coding Evaluation Platform{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="gradient-bg text-white py-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center fade-in">
+            <h1 class="text-4xl md:text-6xl font-bold mb-6">
+                Evaluate LLMs on 
+                <span class="text-yellow-300">Coding Tasks</span>
+            </h1>
+            <p class="text-xl md:text-2xl mb-8 text-gray-100 max-w-3xl mx-auto">
+                Comprehensive benchmarking platform for Large Language Models across frontend, backend, and testing code generation capabilities.
+            </p>
+            
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="/evaluate" class="bg-white text-purple-600 px-8 py-3 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors shadow-lg">
+                    Start Evaluation
+                </a>
+                <a href="/dashboard" class="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold text-lg hover:bg-white hover:text-purple-600 transition-colors">
+                    View Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Features Section -->
+<div class="py-20 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                Comprehensive Code Evaluation
+            </h2>
+            <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                Built on BigCodeBench with custom datasets covering the full application development stack.
+            </p>
+        </div>
+        
+        <div class="grid md:grid-cols-3 gap-8">
+            <!-- Frontend Feature -->
+            <div class="text-center p-8 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl card-hover">
+                <div class="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Frontend Development</h3>
+                <p class="text-gray-600 mb-6">
+                    React components, UI logic, accessibility, responsive design, and modern web standards.
+                </p>
+                <div class="flex flex-wrap gap-2 justify-center">
+                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">React</span>
+                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">CSS</span>
+                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">JavaScript</span>
+                </div>
+            </div>
+            
+            <!-- Backend Feature -->
+            <div class="text-center p-8 bg-gradient-to-br from-green-50 to-emerald-100 rounded-xl card-hover">
+                <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Backend Development</h3>
+                <p class="text-gray-600 mb-6">
+                    REST APIs, database operations, authentication, microservices, and scalable architectures.
+                </p>
+                <div class="flex flex-wrap gap-2 justify-center">
+                    <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Python</span>
+                    <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">APIs</span>
+                    <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">Databases</span>
+                </div>
+            </div>
+            
+            <!-- Testing Feature -->
+            <div class="text-center p-8 bg-gradient-to-br from-purple-50 to-violet-100 rounded-xl card-hover">
+                <div class="w-16 h-16 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Test Generation</h3>
+                <p class="text-gray-600 mb-6">
+                    Unit tests, integration tests, E2E automation, and comprehensive test coverage strategies.
+                </p>
+                <div class="flex flex-wrap gap-2 justify-center">
+                    <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">Unit Tests</span>
+                    <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">E2E</span>
+                    <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm">Integration</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Models Section -->
+<div class="py-20 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                Support for Multiple Models
+            </h2>
+            <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                Evaluate local and cloud-based models with unified interfaces and comprehensive metrics.
+            </p>
+        </div>
+        
+        <div class="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-6">Local Models</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center space-x-4 p-4 bg-white rounded-lg shadow-sm">
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <span class="text-blue-600 font-bold">O</span>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-900">Ollama Integration</h4>
+                            <p class="text-gray-600 text-sm">CodeLlama, DeepSeek Coder, Qwen2.5</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-4 p-4 bg-white rounded-lg shadow-sm">
+                        <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                            <span class="text-green-600 font-bold">H</span>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-900">HuggingFace Models</h4>
+                            <p class="text-gray-600 text-sm">Direct API integration</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-6">Cloud APIs</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center space-x-4 p-4 bg-white rounded-lg shadow-sm">
+                        <div class="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
+                            <span class="text-emerald-600 font-bold">⚡</span>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-900">OpenAI GPT-4</h4>
+                            <p class="text-gray-600 text-sm">Latest GPT models via API</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-4 p-4 bg-white rounded-lg shadow-sm">
+                        <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                            <span class="text-orange-600 font-bold">A</span>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-gray-900">Anthropic Claude</h4>
+                            <p class="text-gray-600 text-sm">Claude 3 family models</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Metrics Section -->
+<div class="py-20 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-16">
+            <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                Comprehensive Evaluation Metrics
+            </h2>
+            <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+                Go beyond basic functionality with detailed scoring across multiple dimensions.
+            </p>
+        </div>
+        
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div class="bg-gray-50 p-6 rounded-xl">
+                <div class="flex items-center mb-4">
+                    <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900">Functionality</h3>
+                </div>
+                <p class="text-gray-600">Basic correctness, requirement fulfillment, and feature completeness.</p>
+            </div>
+            
+            <div class="bg-gray-50 p-6 rounded-xl">
+                <div class="flex items-center mb-4">
+                    <div class="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900">Code Quality</h3>
+                </div>
+                <p class="text-gray-600">Readability, structure, documentation, and best practices adherence.</p>
+            </div>
+            
+            <div class="bg-gray-50 p-6 rounded-xl">
+                <div class="flex items-center mb-4">
+                    <div class="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900">Security</h3>
+                </div>
+                <p class="text-gray-600">Vulnerability assessment, secure coding patterns, and safety checks.</p>
+            </div>
+            
+            <div class="bg-gray-50 p-6 rounded-xl">
+                <div class="flex items-center mb-4">
+                    <div class="w-10 h-10 bg-yellow-500 rounded-lg flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900">Performance</h3>
+                </div>
+                <p class="text-gray-600">Efficiency, optimization patterns, and resource usage considerations.</p>
+            </div>
+            
+            <div class="bg-gray-50 p-6 rounded-xl">
+                <div class="flex items-center mb-4">
+                    <div class="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900">Accessibility</h3>
+                </div>
+                <p class="text-gray-600">WCAG compliance, screen reader support, and inclusive design patterns.</p>
+            </div>
+            
+            <div class="bg-gray-50 p-6 rounded-xl">
+                <div class="flex items-center mb-4">
+                    <div class="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center mr-3">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.502 0L4.314 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900">Error Handling</h3>
+                </div>
+                <p class="text-gray-600">Exception management, graceful failures, and robust error recovery.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CTA Section -->
+<div class="py-20 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+    <div class="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
+        <h2 class="text-3xl md:text-4xl font-bold mb-6">
+            Ready to Evaluate Your Models?
+        </h2>
+        <p class="text-xl mb-8 text-gray-100">
+            Get started with our comprehensive evaluation platform and discover which models perform best for your coding needs.
+        </p>
+        
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="/evaluate" class="bg-white text-blue-600 px-8 py-3 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors shadow-lg">
+                Start Evaluation Now
+            </a>
+            <a href="/datasets" class="border-2 border-white text-white px-8 py-3 rounded-lg font-semibold text-lg hover:bg-white hover:text-blue-600 transition-colors">
+                Explore Datasets
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

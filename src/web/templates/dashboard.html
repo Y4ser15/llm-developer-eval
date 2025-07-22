@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - LLM Coding Evaluation Platform{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-4xl font-bold text-gray-900 mb-2">Dashboard</h1>
+            <p class="text-xl text-gray-600">Monitor your evaluations and analyze model performance</p>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="mb-8">
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
+                <div class="flex flex-wrap gap-4">
+                    <a href="/evaluate" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                        🚀 Start New Evaluation
+                    </a>
+                    <a href="/results" class="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium">
+                        📊 View All Results
+                    </a>
+                    <a href="/datasets" class="bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium">
+                        📚 Browse Datasets
+                    </a>
+                    <button onclick="refreshDashboard()" class="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors font-medium">
+                        🔄 Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Total Evaluations -->
+            <div class="bg-white rounded-xl shadow-sm p-6 card-hover">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-2xl font-bold text-gray-900">{{ recent_results|length }}</h3>
+                        <p class="text-gray-600">Total Evaluations</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Active Evaluations -->
+            <div class="bg-white rounded-xl shadow-sm p-6 card-hover">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-2xl font-bold text-gray-900">{{ active_evaluations }}</h3>
+                        <p class="text-gray-600">Active Evaluations</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Total Tasks -->
+            <div class="bg-white rounded-xl shadow-sm p-6 card-hover">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-2xl font-bold text-gray-900">{{ dataset_summary.total_tasks }}</h3>
+                        <p class="text-gray-600">Available Tasks</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Task Types -->
+            <div class="bg-white rounded-xl shadow-sm p-6 card-hover">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-2xl font-bold text-gray-900">3</h3>
+                        <p class="text-gray-600">Task Categories</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Evaluations -->
+        <div class="grid lg:grid-cols-2 gap-8 mb-8">
+            <!-- Recent Results -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-xl font-semibold text-gray-900">Recent Evaluations</h2>
+                    <a href="/results" class="text-blue-600 hover:text-blue-800 text-sm font-medium">View All →</a>
+                </div>
+
+                {% if recent_results %}
+                <div class="space-y-4">
+                    {% for result in recent_results %}
+                    <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="font-medium text-gray-900">{{ result.run_id[:8] }}...</h3>
+                                <p class="text-sm text-gray-600">{{ result.model_count }} models • {{ result.timestamp[:10] }}</p>
+                            </div>
+                            <div class="text-right">
+                                <div class="flex items-center space-x-2">
+                                    {% if result.status == 'completed' %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        ✅ Completed
+                                    </span>
+                                    {% elif result.status == 'running' %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        🔄 Running
+                                    </span>
+                                    {% elif result.status == 'failed' %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                        ❌ Failed
+                                    </span>
+                                    {% else %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                        ⏸️ {{ result.status|title }}
+                                    </span>
+                                    {% endif %}
+                                    <a href="/results/{{ result.run_id }}" class="text-blue-600 hover:text-blue-800 text-sm">
+                                        View →
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-8">
+                    <svg class="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                    <h3 class="text-lg font-medium text-gray-900 mb-2">No evaluations yet</h3>
+                    <p class="text-gray-600 mb-4">Start your first evaluation to see results here</p>
+                    <a href="/evaluate" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        Start Evaluation
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Dataset Overview -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-xl font-semibold text-gray-900">Dataset Overview</h2>
+                    <a href="/datasets" class="text-blue-600 hover:text-blue-800 text-sm font-medium">Explore →</a>
+                </div>
+
+                <div class="space-y-4">
+                    <!-- Frontend Tasks -->
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="font-medium text-gray-900">Frontend</h3>
+                                    <p class="text-sm text-gray-600">React, UI, Accessibility</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-lg font-semibold text-gray-900">{{ dataset_summary.by_type.frontend }}</div>
+                                <div class="text-sm text-gray-600">tasks</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Backend Tasks -->
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="font-medium text-gray-900">Backend</h3>
+                                    <p class="text-sm text-gray-600">APIs, Databases, Microservices</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-lg font-semibold text-gray-900">{{ dataset_summary.by_type.backend }}</div>
+                                <div class="text-sm text-gray-600">tasks</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Testing Tasks -->
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mr-3">
+                                    <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="font-medium text-gray-900">Testing</h3>
+                                    <p class="text-sm text-gray-600">Unit, Integration, E2E</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-lg font-semibold text-gray-900">{{ dataset_summary.by_type.testing }}</div>
+                                <div class="text-sm text-gray-600">tasks</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Status -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <h2 class="text-xl font-semibold text-gray-900 mb-6">System Status</h2>
+            
+            <div class="grid md:grid-cols-3 gap-6">
+                <!-- Ollama Status -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="font-medium text-gray-900">Ollama</h3>
+                        <div id="ollama-status" class="w-3 h-3 rounded-full bg-gray-400"></div>
+                    </div>
+                    <p class="text-sm text-gray-600" id="ollama-status-text">Checking...</p>
+                </div>
+
+                <!-- API Keys -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="font-medium text-gray-900">API Keys</h3>
+                        <div id="api-status" class="w-3 h-3 rounded-full bg-gray-400"></div>
+                    </div>
+                    <p class="text-sm text-gray-600" id="api-status-text">Checking...</p>
+                </div>
+
+                <!-- System Health -->
+                <div class="border border-gray-200 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="font-medium text-gray-900">System</h3>
+                        <div id="system-status" class="w-3 h-3 rounded-full bg-green-400"></div>
+                    </div>
+                    <p class="text-sm text-gray-600">Operational</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script>
+async function refreshDashboard() {
+    window.location.reload();
+}
+
+async function checkSystemStatus() {
+    try {
+        // Check Ollama status
+        const ollamaResponse = await fetch('/api/models/test?provider=ollama&model_name=codellama:7b&base_url=http://localhost:11434');
+        const ollamaResult = await ollamaResponse.json();
+        
+        const ollamaStatus = document.getElementById('ollama-status');
+        const ollamaText = document.getElementById('ollama-status-text');
+        
+        if (ollamaResult.success) {
+            ollamaStatus.className = 'w-3 h-3 rounded-full bg-green-400';
+            ollamaText.textContent = 'Connected';
+        } else {
+            ollamaStatus.className = 'w-3 h-3 rounded-full bg-red-400';
+            ollamaText.textContent = 'Disconnected';
+        }
+        
+        // Check API status (simplified)
+        const apiStatus = document.getElementById('api-status');
+        const apiText = document.getElementById('api-status-text');
+        apiStatus.className = 'w-3 h-3 rounded-full bg-yellow-400';
+        apiText.textContent = 'Not configured';
+        
+    } catch (error) {
+        console.error('Error checking system status:', error);
+    }
+}
+
+// Auto-refresh status every 30 seconds
+setInterval(checkSystemStatus, 30000);
+checkSystemStatus(); // Initial check
+
+// Auto-refresh dashboard every 2 minutes
+setInterval(() => {
+    if (!document.hidden) {
+        refreshDashboard();
+    }
+}, 120000);
+</script>
+{% endblock %}
