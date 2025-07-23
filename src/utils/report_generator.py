@@ -22,29 +22,78 @@ class ReportGenerator:
     async def generate_evaluation_report(self, evaluation_run, output_path: str):
         """Generate complete HTML evaluation report"""
         try:
-            # Generate charts
-            charts = self._generate_charts(evaluation_run)
-            
-            # Generate summary statistics
-            summary_stats = self._generate_summary_stats(evaluation_run)
-            
-            # Generate detailed tables
-            detailed_tables = self._generate_detailed_tables(evaluation_run)
-            
-            # Generate HTML report
-            html_content = self._generate_html_report(
-                evaluation_run, charts, summary_stats, detailed_tables
-            )
+            # Generate comprehensive report
+            await self.generate_comprehensive_report(evaluation_run, output_path)
+            logger.info(f"Report generated successfully: {output_path}")
+        except Exception as e:
+            logger.error(f"Failed to generate report: {e}")
+            raise
+    
+    async def generate_comprehensive_report(self, evaluation_run, output_path: str):
+        """Generate comprehensive HTML report"""
+        try:
+            # Simple HTML report generation
+            html_content = self._generate_simple_html_report(evaluation_run)
             
             # Save report
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(html_content)
             
-            logger.info(f"Report generated successfully: {output_path}")
+            logger.info(f"Comprehensive report generated: {output_path}")
             
         except Exception as e:
-            logger.error(f"Failed to generate report: {e}")
+            logger.error(f"Failed to generate comprehensive report: {e}")
             raise
+    
+    def _generate_simple_html_report(self, evaluation_run) -> str:
+        """Generate a simple HTML report"""
+        html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LLM Evaluation Report</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 40px; }}
+        .header {{ color: #333; border-bottom: 2px solid #eee; padding-bottom: 20px; }}
+        .summary {{ background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }}
+        .model {{ border: 1px solid #ddd; margin: 10px 0; padding: 15px; border-radius: 5px; }}
+        .score {{ font-weight: bold; color: #007bff; }}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>LLM Coding Evaluation Report</h1>
+        <p>Run ID: {evaluation_run.run_id}</p>
+        <p>Generated: {evaluation_run.timestamp}</p>
+        <p>Duration: {evaluation_run.total_duration:.2f} seconds</p>
+    </div>
+    
+    <div class="summary">
+        <h2>Summary</h2>
+        <p>Total Models Evaluated: {len(evaluation_run.model_results)}</p>
+        <p>Status: {evaluation_run.status}</p>
+    </div>
+    
+    <div class="results">
+        <h2>Model Results</h2>"""
+        
+        for model_result in evaluation_run.model_results:
+            html += f"""
+        <div class="model">
+            <h3>{model_result.model_name}</h3>
+            <p>Provider: {model_result.provider}</p>
+            <p>Overall Score: <span class="score">{model_result.overall_score:.3f}</span></p>
+            <p>Tasks Completed: {model_result.total_tasks}</p>
+            <p>Tasks Passed: {model_result.passed_tasks}</p>
+            <p>Execution Time: {model_result.execution_time:.2f}s</p>
+        </div>"""
+        
+        html += """
+    </div>
+</body>
+</html>"""
+        
+        return html
     
     def _generate_charts(self, evaluation_run) -> Dict[str, str]:
         """Generate all charts for the report"""

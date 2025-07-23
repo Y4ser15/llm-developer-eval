@@ -393,6 +393,62 @@ def _get_available_models() -> List[Dict[str, Any]]:
     except:
         pass
     
+    # Check vLLM servers
+    vllm_endpoints = [
+        "http://localhost:8000",
+        "http://localhost:8001",
+        "http://localhost:8002"
+    ]
+    
+    for i, endpoint in enumerate(vllm_endpoints):
+        try:
+            import requests
+            response = requests.get(f"{endpoint}/v1/models", timeout=3)
+            if response.status_code == 200:
+                vllm_models = response.json().get("data", [])
+                for model in vllm_models:
+                    models.append({
+                        "name": f"vLLM - {model.get('id', f'Server {i+1}')}",
+                        "provider": "vllm",
+                        "model_name": model.get('id', 'unknown'),
+                        "base_url": endpoint,
+                        "available": True
+                    })
+                # If no models returned, add generic entry
+                if not vllm_models:
+                    models.append({
+                        "name": f"vLLM Server {i+1}",
+                        "provider": "vllm",
+                        "model_name": "server-model",
+                        "base_url": endpoint,
+                        "available": True
+                    })
+        except:
+            pass
+    
+    # Add custom server options (configurable)
+    custom_servers = [
+        {
+            "name": "Custom Server (OpenAI API)",
+            "provider": "custom",
+            "model_name": "your-model",
+            "base_url": "http://localhost:8000",
+            "available": True,
+            "configurable": True
+        },
+        {
+            "name": "Custom Server (Custom API)",
+            "provider": "custom",
+            "model_name": "your-model",
+            "base_url": "http://localhost:8000",
+            "available": True,
+            "configurable": True,
+            "api_format": "custom"
+        }
+    ]
+    
+    models.extend(custom_servers)
+    
     # Add API models (require API keys)
     api_models = [
         {
@@ -400,6 +456,18 @@ def _get_available_models() -> List[Dict[str, Any]]:
             "provider": "openai",
             "model_name": "gpt-4-turbo-preview",
             "available": bool(os.getenv("OPENAI_API_KEY"))
+        },
+        {
+            "name": "GPT-4o",
+            "provider": "openai",
+            "model_name": "gpt-4o",
+            "available": bool(os.getenv("OPENAI_API_KEY"))
+        },
+        {
+            "name": "Claude 3.5 Sonnet",
+            "provider": "anthropic",
+            "model_name": "claude-3-5-sonnet-20241022",
+            "available": bool(os.getenv("ANTHROPIC_API_KEY"))
         },
         {
             "name": "Claude 3 Sonnet",
@@ -416,6 +484,16 @@ def _get_available_models() -> List[Dict[str, Any]]:
     ]
     
     models.extend(api_models)
+    
+    # Add extensibility indicator
+    models.append({
+        "name": "...",
+        "provider": "extensible",
+        "model_name": "add-custom",
+        "available": True,
+        "description": "Add custom model configuration"
+    })
+    
     return models
 
 
@@ -427,9 +505,9 @@ def _get_benchmark_statistics(results_list: List[Dict]) -> Dict[str, Any]:
         "total_models_evaluated": 0,
         "average_duration": 0,
         "domain_performance": {
-            "frontend": [],
-            "backend": [],
-            "testing": []
+            "frontend": {"average": 0, "count": 0, "min": 0, "max": 0},
+            "backend": {"average": 0, "count": 0, "min": 0, "max": 0},
+            "testing": {"average": 0, "count": 0, "min": 0, "max": 0}
         }
     }
     
@@ -438,6 +516,7 @@ def _get_benchmark_statistics(results_list: List[Dict]) -> Dict[str, Any]:
     
     total_duration = 0
     total_models = 0
+    domain_scores = {"frontend": [], "backend": [], "testing": []}
     
     for result_info in results_list:
         try:
@@ -448,10 +527,11 @@ def _get_benchmark_statistics(results_list: List[Dict]) -> Dict[str, Any]:
                 
                 # Collect domain scores
                 for model in data.get("models", []):
-                    domain_scores = model.get("summary", {}).get("domain_scores", {})
+                    summary = model.get("summary", {})
+                    domain_scores_data = summary.get("domain_scores", {})
                     for domain in ["frontend", "backend", "testing"]:
-                        if domain in domain_scores:
-                            stats["domain_performance"][domain].append(domain_scores[domain])
+                        if domain in domain_scores_data:
+                            domain_scores[domain].append(domain_scores_data[domain])
         except Exception as e:
             logger.error(f"Failed to process result file {result_info['file_path']}: {e}")
     
@@ -459,22 +539,15 @@ def _get_benchmark_statistics(results_list: List[Dict]) -> Dict[str, Any]:
     if len(results_list) > 0:
         stats["average_duration"] = total_duration / len(results_list)
     
-    # Calculate average domain performance
-    for domain in stats["domain_performance"]:
-        scores = stats["domain_performance"][domain]
+    # Calculate domain performance statistics
+    for domain in ["frontend", "backend", "testing"]:
+        scores = domain_scores[domain]
         if scores:
             stats["domain_performance"][domain] = {
                 "average": sum(scores) / len(scores),
                 "count": len(scores),
                 "min": min(scores),
                 "max": max(scores)
-            }
-        else:
-            stats["domain_performance"][domain] = {
-                "average": 0,
-                "count": 0,
-                "min": 0,
-                "max": 0
             }
     
     return stats

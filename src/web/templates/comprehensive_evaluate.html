@@ -15,37 +15,199 @@
         <!-- Model Selection -->
         <div class="mb-6">
             <label class="block text-sm font-medium text-gray-700 mb-3">Select Models to Evaluate</label>
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <template x-for="model in availableModels" :key="model.name">
-                    <div class="border rounded-lg p-4 cursor-pointer transition duration-200" 
-                         :class="selectedModels.find(m => m.name === model.name) ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'"
-                         @click="toggleModel(model)">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center">
-                                <input type="checkbox" 
-                                       :checked="selectedModels.find(m => m.name === model.name)"
-                                       class="h-4 w-4 text-indigo-600 rounded mr-3">
-                                <span class="font-medium text-sm" x-text="model.name"></span>
+            
+            <!-- Recommended Models Section -->
+            <div class="mb-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                <div class="flex items-center mb-2">
+                    <i class="fas fa-star text-yellow-500 mr-2"></i>
+                    <h3 class="text-sm font-semibold text-gray-800">Recommended Models</h3>
+                </div>
+                <p class="text-xs text-gray-600 mb-3">Popular models that work well for code evaluation</p>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <template x-for="model in availableModels.filter(m => ['ollama', 'vllm'].includes(m.provider) && m.available)" :key="model.name">
+                        <div class="border-2 rounded-lg p-3 cursor-pointer transition duration-200" 
+                             :class="selectedModels.find(m => m.name === model.name) ? 'border-indigo-500 bg-indigo-50' : 'border-blue-200 hover:border-blue-300'"
+                             @click="toggleModel(model)">
+                            <div class="flex items-center justify-between mb-1">
+                                <div class="flex items-center">
+                                    <input type="checkbox" 
+                                           :checked="selectedModels.find(m => m.name === model.name)"
+                                           class="h-3 w-3 text-indigo-600 rounded mr-2">
+                                    <span class="font-medium text-xs" x-text="model.name"></span>
+                                </div>
+                                <div class="flex items-center space-x-1">
+                                    <i class="fas fa-rocket text-yellow-500 text-xs" x-show="model.provider === 'ollama'"></i>
+                                    <i class="fas fa-server text-blue-500 text-xs" x-show="model.provider === 'vllm'"></i>
+                                    <span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-800">Ready</span>
+                                </div>
                             </div>
-                            <span class="text-xs px-2 py-1 rounded-full"
-                                  :class="model.available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
-                                  x-text="model.available ? 'Available' : 'Not Available'"></span>
+                            <div class="text-xs text-gray-600">
+                                <span x-text="model.provider.toUpperCase()"></span> • 
+                                <span x-text="model.model_name"></span>
+                            </div>
                         </div>
-                        <div class="text-xs text-gray-600">
-                            <span x-text="model.provider"></span> • <span x-text="model.model_name"></span>
+                    </template>
+                </div>
+            </div>
+            
+            <!-- All Models Section -->
+            <div class="mb-4">
+                <h3 class="text-sm font-medium text-gray-700 mb-3">All Available Models</h3>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <template x-for="model in availableModels" :key="model.name">
+                        <div class="border rounded-lg p-4 cursor-pointer transition duration-200" 
+                             :class="getModelCardClass(model)"
+                             @click="toggleModel(model)">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center">
+                                    <input type="checkbox" 
+                                           :checked="selectedModels.find(m => m.name === model.name)"
+                                           :disabled="!model.available"
+                                           class="h-4 w-4 text-indigo-600 rounded mr-3">
+                                    <span class="font-medium text-sm" x-text="model.name"></span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <!-- Provider Icon -->
+                                    <i :class="getProviderIcon(model.provider)" class="text-sm"></i>
+                                    <!-- Status Badge -->
+                                    <span :class="getStatusBadgeClass(model)" x-text="getStatusText(model)"></span>
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-600">
+                                <span x-text="model.provider.toUpperCase()"></span>
+                                <span x-show="model.model_name !== 'add-custom'"> • <span x-text="model.model_name"></span></span>
+                                <span x-show="model.base_url"> • <span x-text="model.base_url"></span></span>
+                            </div>
+                            <!-- Special handling for extensible option -->
+                            <div x-show="model.provider === 'extensible'" class="text-xs text-indigo-600 mt-1">
+                                <i class="fas fa-plus mr-1"></i>Click to add custom model configuration
+                            </div>
                         </div>
-                    </div>
-                </template>
+                    </template>
+                </div>
             </div>
             <div x-show="selectedModels.length === 0" class="mt-2 text-sm text-red-600">
                 Please select at least one model to evaluate.
             </div>
         </div>
 
+        <!-- Custom Server Configuration -->
+        <div class="mb-6" x-data="{ showCustomConfig: false, customServers: [] }">
+            <div class="flex items-center justify-between mb-3">
+                <label class="block text-sm font-medium text-gray-700">Custom Server Configuration</label>
+                <button @click="showCustomConfig = !showCustomConfig" 
+                        class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                    <i class="fas fa-plus mr-1" x-show="!showCustomConfig"></i>
+                    <i class="fas fa-minus mr-1" x-show="showCustomConfig"></i>
+                    <span x-text="showCustomConfig ? 'Hide' : 'Add Custom Server'"></span>
+                </button>
+            </div>
+            
+            <!-- Custom Server Form -->
+            <div x-show="showCustomConfig" x-transition class="bg-gray-50 rounded-lg p-4">
+                <div x-data="{ newServer: { name: '', provider: 'vllm', model_name: '', base_url: 'http://localhost:8000', api_key: '', api_format: 'openai' } }">
+                    <div class="grid md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Server Name</label>
+                            <input x-model="newServer.name" type="text" placeholder="My Custom Server" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Provider Type</label>
+                            <select x-model="newServer.provider" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="vllm">vLLM (OpenAI Compatible)</option>
+                                <option value="custom">Custom Server</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Base URL</label>
+                            <input x-model="newServer.base_url" type="text" placeholder="http://localhost:8000" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">Model Name</label>
+                            <input x-model="newServer.model_name" type="text" placeholder="your-model-name" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">API Key (Optional)</label>
+                            <input x-model="newServer.api_key" type="password" placeholder="your-api-key" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                        </div>
+                        <div x-show="newServer.provider === 'custom'">
+                            <label class="block text-xs font-medium text-gray-700 mb-1">API Format</label>
+                            <select x-model="newServer.api_format" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="openai">OpenAI Compatible</option>
+                                <option value="custom">Custom Format</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-3">
+                        <button @click="
+                            if (newServer.name && newServer.model_name && newServer.base_url) {
+                                const serverConfig = {
+                                    name: newServer.name,
+                                    provider: newServer.provider,
+                                    model_name: newServer.model_name,
+                                    base_url: newServer.base_url,
+                                    api_key: newServer.api_key,
+                                    available: true,
+                                    custom: true
+                                };
+                                if (newServer.provider === 'custom') {
+                                    serverConfig.api_format = newServer.api_format;
+                                }
+                                customServers.push(serverConfig);
+                                availableModels.push(serverConfig);
+                                selectedModels.push(serverConfig);
+                                newServer = { name: '', provider: 'vllm', model_name: '', base_url: 'http://localhost:8000', api_key: '', api_format: 'openai' };
+                            }
+                        " 
+                        class="bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-700 transition duration-200">
+                            <i class="fas fa-plus mr-1"></i>Add Server
+                        </button>
+                        
+                        <button @click="
+                            newServer = { name: '', provider: 'vllm', model_name: '', base_url: 'http://localhost:8000', api_key: '', api_format: 'openai' }
+                        " 
+                        class="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-50 transition duration-200">
+                            <i class="fas fa-times mr-1"></i>Clear
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Added Custom Servers -->
+                <div x-show="customServers.length > 0" class="mt-4">
+                    <h4 class="text-sm font-medium text-gray-700 mb-2">Added Custom Servers:</h4>
+                    <div class="space-y-2">
+                        <template x-for="(server, index) in customServers" :key="index">
+                            <div class="flex items-center justify-between bg-white p-3 rounded border">
+                                <div>
+                                    <span class="font-medium text-sm" x-text="server.name"></span>
+                                    <span class="text-xs text-gray-500 ml-2" x-text="`${server.provider} • ${server.base_url}`"></span>
+                                </div>
+                                <button @click="
+                                    customServers.splice(index, 1);
+                                    const modelIndex = availableModels.findIndex(m => m.custom && m.name === server.name);
+                                    if (modelIndex >= 0) availableModels.splice(modelIndex, 1);
+                                    const selectedIndex = selectedModels.findIndex(m => m.custom && m.name === server.name);
+                                    if (selectedIndex >= 0) selectedModels.splice(selectedIndex, 1);
+                                " 
+                                class="text-red-600 hover:text-red-800 text-sm">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Domain Selection -->
         <div class="mb-6">
             <label class="block text-sm font-medium text-gray-700 mb-3">Evaluation Domains</label>
-            <div class="grid md:grid-cols-3 gap-4">
+            <div class="grid md:grid-cols-4 gap-4">
                 <div class="border rounded-lg p-4 cursor-pointer transition duration-200"
                      :class="config.domains.includes('frontend') ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'"
                      @click="toggleDomain('frontend')">
@@ -77,6 +239,16 @@
                         <span class="font-medium">Testing & QA</span>
                     </div>
                     <p class="text-xs text-gray-600">Unit tests, integration tests, E2E scenarios</p>
+                </div>
+                
+                <!-- Extensible Domains Indicator -->
+                <div class="border-dashed border-2 border-gray-300 rounded-lg p-4 cursor-pointer transition duration-200 hover:border-indigo-400 hover:bg-indigo-50"
+                     @click="showDomainExtensionModal()">
+                    <div class="flex items-center justify-center mb-2">
+                        <i class="fas fa-plus-circle text-indigo-500 mr-2"></i>
+                        <span class="font-medium text-indigo-600">...</span>
+                    </div>
+                    <p class="text-xs text-gray-600 text-center">Add custom evaluation domains</p>
                 </div>
             </div>
         </div>
@@ -232,6 +404,10 @@ function evaluationManager() {
             parallel_models: false,
             generate_report: true
         },
+
+        showDomainExtensionModal() {
+            alert('Custom domain configuration coming soon! You can extend the platform by adding new evaluation domains in the datasets/ folder.');
+        },
         showAdvanced: false,
         isEvaluating: false,
         evaluationComplete: false,
@@ -257,7 +433,52 @@ function evaluationManager() {
             return Math.ceil(models * totalTasks * timePerTask);
         },
 
-        // Methods
+        // Helper methods for model display
+        getModelCardClass(model) {
+            if (!model.available) {
+                return 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed';
+            }
+            if (this.selectedModels.find(m => m.name === model.name)) {
+                return 'border-indigo-500 bg-indigo-50';
+            }
+            if (model.provider === 'extensible') {
+                return 'border-dashed border-indigo-300 hover:border-indigo-500 hover:bg-indigo-50';
+            }
+            return 'border-gray-200 hover:border-gray-300';
+        },
+
+        getProviderIcon(provider) {
+            const icons = {
+                'ollama': 'fas fa-rocket text-orange-500',
+                'openai': 'fas fa-brain text-green-600',
+                'anthropic': 'fas fa-robot text-purple-600',
+                'huggingface': 'fas fa-face-smile text-yellow-600',
+                'vllm': 'fas fa-server text-blue-600',
+                'custom': 'fas fa-cogs text-gray-600',
+                'extensible': 'fas fa-plus-circle text-indigo-600'
+            };
+            return icons[provider] || 'fas fa-question-circle text-gray-400';
+        },
+
+        getStatusBadgeClass(model) {
+            if (!model.available) {
+                return 'text-xs px-2 py-1 rounded-full bg-red-100 text-red-800';
+            }
+            if (model.provider === 'extensible') {
+                return 'text-xs px-2 py-1 rounded-full bg-indigo-100 text-indigo-800';
+            }
+            if (['ollama', 'vllm'].includes(model.provider)) {
+                return 'text-xs px-2 py-1 rounded-full bg-green-100 text-green-800';
+            }
+            return 'text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800';
+        },
+
+        getStatusText(model) {
+            if (!model.available) return 'Unavailable';
+            if (model.provider === 'extensible') return 'Configure';
+            if (['ollama', 'vllm'].includes(model.provider)) return 'Ready';
+            return 'API Required';
+        },
         init() {
             // Select first available model by default
             const firstAvailable = this.availableModels.find(m => m.available);
@@ -268,6 +489,18 @@ function evaluationManager() {
 
         toggleModel(model) {
             if (!model.available) return;
+            
+            // Handle extensible models (show custom config)
+            if (model.provider === 'extensible') {
+                // Scroll to custom config section
+                const customSection = document.querySelector('[x-data*="showCustomConfig"]');
+                if (customSection) {
+                    customSection.scrollIntoView({ behavior: 'smooth' });
+                    // Trigger the show custom config
+                    customSection.__x.$data.showCustomConfig = true;
+                }
+                return;
+            }
             
             const index = this.selectedModels.findIndex(m => m.name === model.name);
             if (index >= 0) {

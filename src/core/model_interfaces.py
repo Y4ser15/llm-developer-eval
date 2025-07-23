@@ -57,6 +57,250 @@ class ModelInterface(ABC):
         pass
 
 
+class VLLMInterface(ModelInterface):
+    """Interface for vLLM servers (OpenAI-compatible)"""
+    
+    def __init__(self, config: ModelConfig):
+        super().__init__(config)
+        self.base_url = config.base_url or "http://localhost:8000"
+        
+    def test_connection(self) -> bool:
+        """Test vLLM server connection"""
+        try:
+            response = requests.get(f"{self.base_url}/v1/models", timeout=5)
+            return response.status_code == 200
+        except Exception:
+            return False
+    
+    def generate_code(self, prompt: str, system_prompt: Optional[str] = None) -> GenerationResult:
+        """Generate code using vLLM server (OpenAI-compatible API)"""
+        start_time = time.time()
+        
+        try:
+            messages = []
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": prompt})
+            
+            payload = {
+                "model": self.model_name,
+                "messages": messages,
+                "temperature": self.config.temperature,
+                "max_tokens": self.config.max_tokens,
+                "stream": False
+            }
+            
+            headers = {"Content-Type": "application/json"}
+            if self.config.api_key:
+                headers["Authorization"] = f"Bearer {self.config.api_key}"
+            
+            response = requests.post(
+                f"{self.base_url}/v1/chat/completions",
+                json=payload,
+                headers=headers,
+                timeout=self.config.timeout
+            )
+            
+            response.raise_for_status()
+            result = response.json()
+            
+            generation_time = time.time() - start_time
+            
+            return GenerationResult(
+                code=result["choices"][0]["message"]["content"],
+                model_name=self.model_name,
+                provider=self.provider,
+                generation_time=generation_time,
+                token_count=result.get("usage", {}).get("total_tokens")
+            )
+            
+        except Exception as e:
+            return GenerationResult(
+                code="",
+                model_name=self.model_name,
+                provider=self.provider,
+                generation_time=time.time() - start_time,
+                error=str(e)
+            )
+    
+    async def generate_code_async(self, prompt: str, system_prompt: Optional[str] = None) -> GenerationResult:
+        """Async version of vLLM generation"""
+        start_time = time.time()
+        
+        try:
+            messages = []
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": prompt})
+            
+            payload = {
+                "model": self.model_name,
+                "messages": messages,
+                "temperature": self.config.temperature,
+                "max_tokens": self.config.max_tokens,
+                "stream": False
+            }
+            
+            headers = {"Content-Type": "application/json"}
+            if self.config.api_key:
+                headers["Authorization"] = f"Bearer {self.config.api_key}"
+            
+            async with httpx.AsyncClient(timeout=self.config.timeout) as client:
+                response = await client.post(
+                    f"{self.base_url}/v1/chat/completions",
+                    json=payload,
+                    headers=headers
+                )
+                response.raise_for_status()
+                result = response.json()
+            
+            generation_time = time.time() - start_time
+            
+            return GenerationResult(
+                code=result["choices"][0]["message"]["content"],
+                model_name=self.model_name,
+                provider=self.provider,
+                generation_time=generation_time,
+                token_count=result.get("usage", {}).get("total_tokens")
+            )
+            
+        except Exception as e:
+            return GenerationResult(
+                code="",
+                model_name=self.model_name,
+                provider=self.provider,
+                generation_time=time.time() - start_time,
+                error=str(e)
+            )
+
+
+class CustomServerInterface(ModelInterface):
+    """Interface for custom LLM servers with flexible API"""
+    
+    def __init__(self, config: ModelConfig):
+        super().__init__(config)
+        self.base_url = config.base_url or "http://localhost:8000"
+        self.api_format = getattr(config, 'api_format', 'openai')  # openai, custom
+        
+    def test_connection(self) -> bool:
+        """Test custom server connection"""
+        try:
+            # Try different endpoints based on API format
+            test_endpoints = [
+                f"{self.base_url}/v1/models",
+                f"{self.base_url}/models",
+                f"{self.base_url}/health",
+                f"{self.base_url}/"
+            ]
+            
+            for endpoint in test_endpoints:
+                try:
+                    response = requests.get(endpoint, timeout=5)
+                    if response.status_code == 200:
+                        return True
+                except:
+                    continue
+            return False
+        except Exception:
+            return False
+    
+    def generate_code(self, prompt: str, system_prompt: Optional[str] = None) -> GenerationResult:
+        """Generate code using custom server"""
+        start_time = time.time()
+        
+        try:
+            if self.api_format == 'openai':
+                return self._generate_openai_format(prompt, system_prompt, start_time)
+            else:
+                return self._generate_custom_format(prompt, system_prompt, start_time)
+                
+        except Exception as e:
+            return GenerationResult(
+                code="",
+                model_name=self.model_name,
+                provider=self.provider,
+                generation_time=time.time() - start_time,
+                error=str(e)
+            )
+    
+    def _generate_openai_format(self, prompt: str, system_prompt: Optional[str], start_time: float) -> GenerationResult:
+        """Generate using OpenAI-compatible API"""
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+        
+        payload = {
+            "model": self.model_name,
+            "messages": messages,
+            "temperature": self.config.temperature,
+            "max_tokens": self.config.max_tokens
+        }
+        
+        headers = {"Content-Type": "application/json"}
+        if self.config.api_key:
+            headers["Authorization"] = f"Bearer {self.config.api_key}"
+        
+        response = requests.post(
+            f"{self.base_url}/v1/chat/completions",
+            json=payload,
+            headers=headers,
+            timeout=self.config.timeout
+        )
+        
+        response.raise_for_status()
+        result = response.json()
+        
+        return GenerationResult(
+            code=result["choices"][0]["message"]["content"],
+            model_name=self.model_name,
+            provider=self.provider,
+            generation_time=time.time() - start_time,
+            token_count=result.get("usage", {}).get("total_tokens")
+        )
+    
+    def _generate_custom_format(self, prompt: str, system_prompt: Optional[str], start_time: float) -> GenerationResult:
+        """Generate using custom API format"""
+        full_prompt = prompt
+        if system_prompt:
+            full_prompt = f"{system_prompt}\n\n{prompt}"
+        
+        payload = {
+            "prompt": full_prompt,
+            "model": self.model_name,
+            "temperature": self.config.temperature,
+            "max_tokens": self.config.max_tokens
+        }
+        
+        headers = {"Content-Type": "application/json"}
+        if self.config.api_key:
+            headers["Authorization"] = f"Bearer {self.config.api_key}"
+        
+        response = requests.post(
+            f"{self.base_url}/generate",
+            json=payload,
+            headers=headers,
+            timeout=self.config.timeout
+        )
+        
+        response.raise_for_status()
+        result = response.json()
+        
+        # Handle different response formats
+        code = result.get("text", result.get("response", result.get("output", "")))
+        
+        return GenerationResult(
+            code=code,
+            model_name=self.model_name,
+            provider=self.provider,
+            generation_time=time.time() - start_time
+        )
+    
+    async def generate_code_async(self, prompt: str, system_prompt: Optional[str] = None) -> GenerationResult:
+        """Async version - just calls sync version for simplicity"""
+        return self.generate_code(prompt, system_prompt)
+
+
 class OllamaInterface(ModelInterface):
     """Interface for Ollama local models"""
     
@@ -528,6 +772,10 @@ class ModelFactory:
             return AnthropicInterface(config)
         elif provider == "huggingface":
             return HuggingFaceInterface(config)
+        elif provider == "vllm":
+            return VLLMInterface(config)
+        elif provider == "custom":
+            return CustomServerInterface(config)
         else:
             raise ValueError(f"Unsupported provider: {provider}")
     
@@ -553,6 +801,20 @@ class ModelFactory:
                 provider="ollama",
                 model_name="qwen2.5-coder:7b",
                 base_url="http://localhost:11434"
+            ),
+            # vLLM servers (OpenAI-compatible)
+            ModelConfig(
+                name="vLLM Server (Local)",
+                provider="vllm",
+                model_name="your-model-name",
+                base_url="http://localhost:8000"
+            ),
+            # Custom servers
+            ModelConfig(
+                name="Custom Server (OpenAI API)",
+                provider="custom",
+                model_name="your-model",
+                base_url="http://localhost:8000"
             ),
             # API models (require API keys)
             ModelConfig(
