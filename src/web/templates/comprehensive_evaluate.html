@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div x-data="evaluationManager()" x-init="init()">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Start Comprehensive Evaluation</h1>
+        <p class="text-gray-600">Configure and run comprehensive LLM coding evaluation across multiple domains and benchmarks.</p>
+    </div>
+
+    <!-- Evaluation Configuration Form -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+        <h2 class="text-xl font-semibold mb-6">Evaluation Configuration</h2>
+        
+        <!-- Model Selection -->
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-3">Select Models to Evaluate</label>
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <template x-for="model in availableModels" :key="model.name">
+                    <div class="border rounded-lg p-4 cursor-pointer transition duration-200" 
+                         :class="selectedModels.find(m => m.name === model.name) ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'"
+                         @click="toggleModel(model)">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center">
+                                <input type="checkbox" 
+                                       :checked="selectedModels.find(m => m.name === model.name)"
+                                       class="h-4 w-4 text-indigo-600 rounded mr-3">
+                                <span class="font-medium text-sm" x-text="model.name"></span>
+                            </div>
+                            <span class="text-xs px-2 py-1 rounded-full"
+                                  :class="model.available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
+                                  x-text="model.available ? 'Available' : 'Not Available'"></span>
+                        </div>
+                        <div class="text-xs text-gray-600">
+                            <span x-text="model.provider"></span> • <span x-text="model.model_name"></span>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            <div x-show="selectedModels.length === 0" class="mt-2 text-sm text-red-600">
+                Please select at least one model to evaluate.
+            </div>
+        </div>
+
+        <!-- Domain Selection -->
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-3">Evaluation Domains</label>
+            <div class="grid md:grid-cols-3 gap-4">
+                <div class="border rounded-lg p-4 cursor-pointer transition duration-200"
+                     :class="config.domains.includes('frontend') ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'"
+                     @click="toggleDomain('frontend')">
+                    <div class="flex items-center mb-2">
+                        <input type="checkbox" :checked="config.domains.includes('frontend')" class="h-4 w-4 text-indigo-600 rounded mr-3">
+                        <i class="fas fa-desktop text-blue-600 mr-2"></i>
+                        <span class="font-medium">Frontend Development</span>
+                    </div>
+                    <p class="text-xs text-gray-600">React components, UI logic, styling, user interactions</p>
+                </div>
+                
+                <div class="border rounded-lg p-4 cursor-pointer transition duration-200"
+                     :class="config.domains.includes('backend') ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'"
+                     @click="toggleDomain('backend')">
+                    <div class="flex items-center mb-2">
+                        <input type="checkbox" :checked="config.domains.includes('backend')" class="h-4 w-4 text-indigo-600 rounded mr-3">
+                        <i class="fas fa-server text-green-600 mr-2"></i>
+                        <span class="font-medium">Backend Development</span>
+                    </div>
+                    <p class="text-xs text-gray-600">API endpoints, database operations, business logic</p>
+                </div>
+                
+                <div class="border rounded-lg p-4 cursor-pointer transition duration-200"
+                     :class="config.domains.includes('testing') ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'"
+                     @click="toggleDomain('testing')">
+                    <div class="flex items-center mb-2">
+                        <input type="checkbox" :checked="config.domains.includes('testing')" class="h-4 w-4 text-indigo-600 rounded mr-3">
+                        <i class="fas fa-vial text-purple-600 mr-2"></i>
+                        <span class="font-medium">Testing & QA</span>
+                    </div>
+                    <p class="text-xs text-gray-600">Unit tests, integration tests, E2E scenarios</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Benchmark Selection -->
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-3">Benchmark Frameworks</label>
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="border rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center">
+                            <input type="checkbox" x-model="config.include_bigcodebench" class="h-4 w-4 text-indigo-600 rounded mr-3">
+                            <span class="font-medium">BigCodeBench</span>
+                        </div>
+                        <span class="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">Available</span>
+                    </div>
+                    <p class="text-xs text-gray-600">Practical programming tasks with diverse function calls</p>
+                </div>
+                
+                <div class="border rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center">
+                            <input type="checkbox" x-model="config.include_humaneval" class="h-4 w-4 text-indigo-600 rounded mr-3">
+                            <span class="font-medium">HumanEval</span>
+                        </div>
+                        <span class="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">Available</span>
+                    </div>
+                    <p class="text-xs text-gray-600">Function-level code generation tasks</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Advanced Configuration -->
+        <div class="mb-6">
+            <button class="text-indigo-600 hover:text-indigo-800 text-sm font-medium" @click="showAdvanced = !showAdvanced">
+                <i class="fas fa-cog mr-1"></i>Advanced Configuration
+                <i class="fas fa-chevron-down ml-1" :class="{'rotate-180': showAdvanced}"></i>
+            </button>
+            
+            <div x-show="showAdvanced" x-transition class="mt-4 space-y-4">
+                <div class="grid md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Max Tasks per Domain</label>
+                        <input type="number" x-model="config.max_tasks_per_domain" min="1" max="50" 
+                               class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Execution Mode</label>
+                        <select x-model="config.parallel_models" class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                            <option value="false">Sequential (Recommended)</option>
+                            <option value="true">Parallel (Faster)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="flex items-center">
+                    <input type="checkbox" x-model="config.generate_report" class="h-4 w-4 text-indigo-600 rounded mr-3">
+                    <label class="text-sm text-gray-700">Generate detailed HTML report</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Start Evaluation Button -->
+        <div class="flex items-center justify-between">
+            <div class="text-sm text-gray-600">
+                <i class="fas fa-info-circle mr-1"></i>
+                Estimated time: <span x-text="estimatedTime"></span> minutes
+            </div>
+            <button @click="startEvaluation()" 
+                    :disabled="!canStartEvaluation || isEvaluating"
+                    class="bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition duration-200">
+                <template x-if="!isEvaluating">
+                    <span><i class="fas fa-play mr-2"></i>Start Evaluation</span>
+                </template>
+                <template x-if="isEvaluating">
+                    <span><i class="fas fa-spinner fa-spin mr-2"></i>Evaluating...</span>
+                </template>
+            </button>
+        </div>
+    </div>
+
+    <!-- Real-time Progress -->
+    <div x-show="isEvaluating" x-transition class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-semibold mb-4">Evaluation Progress</h2>
+        
+        <!-- Progress Bar -->
+        <div class="mb-4">
+            <div class="flex justify-between text-sm text-gray-600 mb-2">
+                <span>Overall Progress</span>
+                <span x-text="Math.round(progress) + '%'"></span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+                <div class="bg-indigo-600 h-2 rounded-full progress-bar" :style="`width: ${progress}%`"></div>
+            </div>
+        </div>
+
+        <!-- Current Status -->
+        <div class="bg-gray-50 rounded-lg p-4 mb-4">
+            <div class="flex items-center">
+                <i class="fas fa-spinner fa-spin text-indigo-600 mr-3"></i>
+                <span class="text-sm" x-text="currentStatus"></span>
+            </div>
+        </div>
+
+        <!-- Progress Log -->
+        <div class="max-h-64 overflow-y-auto bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-sm">
+            <template x-for="log in progressLogs" :key="log.timestamp">
+                <div class="mb-1">
+                    <span class="text-gray-500" x-text="log.timestamp"></span>
+                    <span x-text="log.message"></span>
+                </div>
+            </template>
+        </div>
+
+        <!-- Cancel Button -->
+        <div class="mt-4 text-center">
+            <button @click="cancelEvaluation()" class="text-red-600 hover:text-red-800 text-sm font-medium">
+                <i class="fas fa-times mr-1"></i>Cancel Evaluation
+            </button>
+        </div>
+    </div>
+
+    <!-- Evaluation Complete -->
+    <div x-show="evaluationComplete" x-transition class="bg-white rounded-lg shadow-md p-6">
+        <div class="text-center">
+            <i class="fas fa-check-circle text-green-600 text-4xl mb-4"></i>
+            <h2 class="text-2xl font-semibold mb-2">Evaluation Complete!</h2>
+            <p class="text-gray-600 mb-6">Your comprehensive evaluation has finished successfully.</p>
+            
+            <div class="flex justify-center space-x-4">
+                <a :href="`/results/${runId}`" class="bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition duration-200">
+                    <i class="fas fa-eye mr-2"></i>View Results
+                </a>
+                <a :href="`/results/${runId}/report`" class="border border-indigo-600 text-indigo-600 px-6 py-3 rounded-lg font-semibold hover:bg-indigo-50 transition duration-200">
+                    <i class="fas fa-file-alt mr-2"></i>Download Report
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function evaluationManager() {
+    return {
+        // State
+        availableModels: {{ available_models | tojson }},
+        selectedModels: [],
+        config: {
+            domains: ['frontend', 'backend', 'testing'],
+            max_tasks_per_domain: 10,
+            include_bigcodebench: true,
+            include_humaneval: true,
+            parallel_models: false,
+            generate_report: true
+        },
+        showAdvanced: false,
+        isEvaluating: false,
+        evaluationComplete: false,
+        progress: 0,
+        currentStatus: '',
+        progressLogs: [],
+        runId: null,
+        websocket: null,
+
+        // Computed
+        get canStartEvaluation() {
+            return this.selectedModels.length > 0 && 
+                   this.config.domains.length > 0 && 
+                   (this.config.include_bigcodebench || this.config.include_humaneval);
+        },
+
+        get estimatedTime() {
+            const models = this.selectedModels.length || 1;
+            const domains = this.config.domains.length || 1;
+            const tasksPerDomain = this.config.max_tasks_per_domain || 10;
+            const totalTasks = domains * tasksPerDomain;
+            const timePerTask = 0.5; // minutes
+            return Math.ceil(models * totalTasks * timePerTask);
+        },
+
+        // Methods
+        init() {
+            // Select first available model by default
+            const firstAvailable = this.availableModels.find(m => m.available);
+            if (firstAvailable) {
+                this.selectedModels.push(firstAvailable);
+            }
+        },
+
+        toggleModel(model) {
+            if (!model.available) return;
+            
+            const index = this.selectedModels.findIndex(m => m.name === model.name);
+            if (index >= 0) {
+                this.selectedModels.splice(index, 1);
+            } else {
+                this.selectedModels.push(model);
+            }
+        },
+
+        toggleDomain(domain) {
+            const index = this.config.domains.indexOf(domain);
+            if (index >= 0) {
+                this.config.domains.splice(index, 1);
+            } else {
+                this.config.domains.push(domain);
+            }
+        },
+
+        async startEvaluation() {
+            if (!this.canStartEvaluation) return;
+
+            this.isEvaluating = true;
+            this.evaluationComplete = false;
+            this.progress = 0;
+            this.progressLogs = [];
+            this.currentStatus = 'Initializing evaluation...';
+
+            try {
+                // Prepare evaluation request
+                const evaluationRequest = {
+                    model_configs: this.selectedModels.map(model => ({
+                        name: model.name,
+                        provider: model.provider,
+                        model_name: model.model_name,
+                        base_url: model.base_url || null,
+                        api_key: model.api_key || null
+                    })),
+                    domains: this.config.domains,
+                    max_tasks_per_domain: parseInt(this.config.max_tasks_per_domain),
+                    include_bigcodebench: this.config.include_bigcodebench,
+                    include_humaneval: this.config.include_humaneval,
+                    parallel_models: this.config.parallel_models === 'true',
+                    generate_report: this.config.generate_report
+                };
+
+                // Start evaluation
+                const response = await fetch('/api/evaluate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(evaluationRequest)
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    // Connect to WebSocket for real-time updates
+                    this.connectWebSocket(result.client_id);
+                } else {
+                    throw new Error(result.detail || 'Failed to start evaluation');
+                }
+
+            } catch (error) {
+                console.error('Evaluation failed:', error);
+                this.currentStatus = `Error: ${error.message}`;
+                this.isEvaluating = false;
+            }
+        },
+
+        connectWebSocket(clientId) {
+            WebSocketManager.connect(clientId, (data) => {
+                if (data.type === 'progress') {
+                    this.currentStatus = data.message;
+                    
+                    if (data.progress !== undefined) {
+                        this.progress = data.progress;
+                    }
+
+                    // Add to progress log
+                    this.progressLogs.push({
+                        timestamp: new Date().toLocaleTimeString(),
+                        message: data.message
+                    });
+
+                    // Check if evaluation completed
+                    if (data.message.includes('Evaluation completed') || data.progress === 100) {
+                        this.isEvaluating = false;
+                        this.evaluationComplete = true;
+                        this.progress = 100;
+                        
+                        // Extract run ID from message if available
+                        const runIdMatch = data.message.match(/Run ID: ([\w-]+)/);
+                        if (runIdMatch) {
+                            this.runId = runIdMatch[1];
+                        }
+                    }
+
+                    // Scroll to bottom of log
+                    this.$nextTick(() => {
+                        const logContainer = this.$el.querySelector('.overflow-y-auto');
+                        if (logContainer) {
+                            logContainer.scrollTop = logContainer.scrollHeight;
+                        }
+                    });
+                }
+            });
+        },
+
+        cancelEvaluation() {
+            this.isEvaluating = false;
+            this.currentStatus = 'Evaluation cancelled by user';
+            WebSocketManager.disconnect();
+        }
+    };
+}
+</script>
+{% endblock %}

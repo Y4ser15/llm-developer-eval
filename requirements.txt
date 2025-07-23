@@ -1,11 +1,16 @@
-# Core Framework
+# LLM Coding Evaluation Platform - Requirements
+# Core evaluation framework with BigCodeBench integration
+
+# Core Framework & BigCodeBench
 bigcodebench>=0.1.8
+git+https://github.com/bigcode-project/bigcodebench.git
 
 # Web Framework
 fastapi>=0.104.0
-uvicorn>=0.24.0
+uvicorn[standard]>=0.24.0
 jinja2>=3.1.2
 python-multipart>=0.0.6
+websockets>=12.0
 
 # Data Processing & Analysis
 pandas>=2.0.0
@@ -14,26 +19,31 @@ plotly>=5.17.0
 matplotlib>=3.7.0
 seaborn>=0.12.0
 
-# HTTP & API
+# HTTP & API Clients
 requests>=2.31.0
 httpx>=0.25.0
 aiohttp>=3.9.0
 
-# AI & ML
-openai>=1.0.0
-anthropic>=0.3.0
+# AI & ML Models - Compatible versions
+openai>=1.3.0,<2.0.0
+anthropic>=0.8.0
 huggingface-hub>=0.19.0
 torch>=2.0.0
 transformers>=4.35.0
 accelerate>=0.24.0
 datasets>=2.14.0
 
-# Code Evaluation & Testing
+# Evaluation & Testing
 pytest>=7.4.0
 coverage>=7.3.0
 black>=23.0.0
 isort>=5.12.0
 flake8>=6.0.0
+evaluate>=0.4.0
+
+# Code Execution & Sandboxing
+docker>=6.1.0
+subprocess32>=3.5.4; python_version < '3.3'
 
 # Database & Storage
 sqlalchemy>=2.0.0
@@ -46,7 +56,6 @@ passlib[bcrypt]>=1.7.4
 python-dotenv>=1.0.0
 
 # Development & Deployment
-docker>=6.1.0
 gunicorn>=21.2.0
 pydantic>=2.4.0
 pydantic-settings>=2.0.0
@@ -57,11 +66,16 @@ rich>=13.6.0
 tqdm>=4.66.0
 PyYAML>=6.0.1
 jsonschema>=4.19.0
+psutil>=5.9.0
+pathlib2>=2.3.7; python_version < '3.4'
 
-# Optional: GPU Support
-# torch-audio>=2.0.0
-# torch-vision>=0.15.0
+# Additional evaluation frameworks
+# HumanEval support via datasets
+# EvalPlus integration capabilities
 
-# Development Only
-# jupyter>=1.0.0
-# ipython>=8.15.0
+# Optional: Flash Attention for faster model inference
+# flash-attn>=2.0.0  # Uncomment if using local models with CUDA
+
+# Development tools
+jupyter>=1.0.0
+ipython>=8.0.0

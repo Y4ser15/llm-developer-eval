@@ -86,6 +86,7 @@ def test_evaluation_engine():
     
     try:
         from src.evaluation.evaluation_engine import EvaluationEngine, EvaluationConfig
+        from src.core.custom_datasets import TaskType, DifficultyLevel
         
         engine = EvaluationEngine()
         config = EvaluationConfig(

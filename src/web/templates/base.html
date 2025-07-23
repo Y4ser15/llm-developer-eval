@@ -3,214 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}LLM Coding Evaluation Platform{% endblock %}</title>
-    
-    <!-- Tailwind CSS -->
+    <title>{{ title }} | LLM Coding Evaluation Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Alpine.js for interactivity -->
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    
-    <!-- Chart.js for visualizations -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <!-- Custom CSS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/alpinejs/3.13.3/cdn.min.js" defer></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         .gradient-bg {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
-        
-        .card-hover {
-            transition: all 0.3s ease;
-        }
-        
         .card-hover:hover {
             transform: translateY(-4px);
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
-        
-        .status-running {
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .fade-in {
-            animation: fadeIn 0.6s ease-out;
+        .progress-bar {
+            transition: width 0.3s ease-in-out;
         }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-gray-50 font-sans">
     <!-- Navigation -->
-    <nav class="bg-white shadow-lg border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4">
             <div class="flex justify-between h-16">
                 <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <a href="/" class="flex items-center">
-                            <div class="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                                <span class="text-white font-bold text-lg">L</span>
-                            </div>
-                            <span class="ml-2 text-xl font-bold text-gray-900">LLM Eval</span>
-                        </a>
-                    </div>
-                    
-                    <!-- Desktop Navigation -->
-                    <div class="hidden md:ml-6 md:flex md:space-x-8">
-                        <a href="/dashboard" class="nav-link border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors">
-                            Dashboard
-                        </a>
-                        <a href="/evaluate" class="nav-link border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors">
-                            Run Evaluation
-                        </a>
-                        <a href="/results" class="nav-link border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors">
-                            Results
-                        </a>
-                        <a href="/datasets" class="nav-link border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm transition-colors">
-                            Datasets
-                        </a>
-                    </div>
+                    <i class="fas fa-code text-2xl text-indigo-600 mr-3"></i>
+                    <span class="text-xl font-bold text-gray-800">LLM Coding Evaluation Platform</span>
                 </div>
-                
-                <!-- Right side -->
                 <div class="flex items-center space-x-4">
-                    <div id="status-indicator" class="hidden">
-                        <div class="flex items-center space-x-2 bg-blue-50 px-3 py-1 rounded-full">
-                            <div class="w-2 h-2 bg-blue-500 rounded-full status-running"></div>
-                            <span class="text-blue-700 text-xs font-medium" id="status-text">Evaluation Running</span>
-                        </div>
-                    </div>
-                    
-                    <!-- Mobile menu button -->
-                    <div class="md:hidden">
-                        <button type="button" class="mobile-menu-button inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500">
-                            <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-                            </svg>
-                        </button>
-                    </div>
+                    <a href="/" class="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">Home</a>
+                    <a href="/evaluate" class="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">Evaluate</a>
+                    <a href="/dashboard" class="text-gray-600 hover:text-indigo-600 px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
                 </div>
-            </div>
-        </div>
-        
-        <!-- Mobile menu -->
-        <div class="mobile-menu hidden md:hidden">
-            <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-gray-50 border-t">
-                <a href="/dashboard" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-200 transition-colors">Dashboard</a>
-                <a href="/evaluate" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-200 transition-colors">Run Evaluation</a>
-                <a href="/results" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-200 transition-colors">Results</a>
-                <a href="/datasets" class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-200 transition-colors">Datasets</a>
             </div>
         </div>
     </nav>
-    
+
     <!-- Main Content -->
-    <main class="flex-1">
+    <main class="max-w-7xl mx-auto py-6 px-4">
         {% block content %}{% endblock %}
     </main>
-    
+
     <!-- Footer -->
-    <footer class="bg-white border-t border-gray-200 py-8 mt-12">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center text-gray-500 text-sm">
-                <p>&copy; 2024 LLM Coding Evaluation Platform. Built with FastAPI and modern web technologies.</p>
-                <div class="mt-2 flex justify-center space-x-4">
-                    <a href="https://github.com" class="text-gray-400 hover:text-gray-500">GitHub</a>
-                    <a href="/api/docs" class="text-gray-400 hover:text-gray-500">API Docs</a>
-                    <a href="/health" class="text-gray-400 hover:text-gray-500">Health Check</a>
-                </div>
+    <footer class="bg-gray-800 text-white mt-12">
+        <div class="max-w-7xl mx-auto py-6 px-4">
+            <div class="text-center">
+                <p>&copy; 2025 LLM Coding Evaluation Platform. Built for comprehensive LLM assessment.</p>
             </div>
         </div>
     </footer>
-    
-    <!-- Global JavaScript -->
+
+    <!-- WebSocket Connection Script -->
     <script>
-        // Mobile menu toggle
-        document.addEventListener('DOMContentLoaded', function() {
-            const mobileMenuButton = document.querySelector('.mobile-menu-button');
-            const mobileMenu = document.querySelector('.mobile-menu');
+        window.WebSocketManager = {
+            connection: null,
             
-            if (mobileMenuButton && mobileMenu) {
-                mobileMenuButton.addEventListener('click', function() {
-                    mobileMenu.classList.toggle('hidden');
-                });
-            }
-            
-            // Set active navigation link
-            const currentPath = window.location.pathname;
-            const navLinks = document.querySelectorAll('.nav-link');
-            
-            navLinks.forEach(link => {
-                if (link.getAttribute('href') === currentPath) {
-                    link.classList.remove('border-transparent', 'text-gray-500');
-                    link.classList.add('border-blue-500', 'text-blue-600');
-                }
-            });
-        });
-        
-        // Global utility functions
-        function showNotification(message, type = 'info') {
-            const notification = document.createElement('div');
-            notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 transform translate-x-full`;
-            
-            const bgColor = type === 'error' ? 'bg-red-500' : type === 'success' ? 'bg-green-500' : 'bg-blue-500';
-            notification.className += ` ${bgColor} text-white`;
-            
-            notification.innerHTML = `
-                <div class="flex items-center space-x-2">
-                    <span>${message}</span>
-                    <button onclick="this.parentElement.parentElement.remove()" class="ml-2 text-white opacity-70 hover:opacity-100">
-                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
-                        </svg>
-                    </button>
-                </div>
-            `;
-            
-            document.body.appendChild(notification);
-            
-            // Animate in
-            setTimeout(() => {
-                notification.classList.remove('translate-x-full');
-            }, 100);
-            
-            // Auto remove after 5 seconds
-            setTimeout(() => {
-                notification.classList.add('translate-x-full');
-                setTimeout(() => notification.remove(), 300);
-            }, 5000);
-        }
-        
-        // Check for active evaluations
-        async function checkActiveEvaluations() {
-            try {
-                const response = await fetch('/api/results');
-                const results = await response.json();
+            connect: function(clientId, onMessage) {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}/ws/${clientId}`;
                 
-                // Check if any evaluations are running
-                const activeEvals = results.filter(r => r.status === 'running');
-                const statusIndicator = document.getElementById('status-indicator');
+                this.connection = new WebSocket(wsUrl);
                 
-                if (activeEvals.length > 0 && statusIndicator) {
-                    statusIndicator.classList.remove('hidden');
-                    document.getElementById('status-text').textContent = 
-                        `${activeEvals.length} Evaluation${activeEvals.length > 1 ? 's' : ''} Running`;
-                } else if (statusIndicator) {
-                    statusIndicator.classList.add('hidden');
+                this.connection.onopen = function(event) {
+                    console.log('WebSocket connected');
+                };
+                
+                this.connection.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    if (onMessage) {
+                        onMessage(data);
+                    }
+                };
+                
+                this.connection.onclose = function(event) {
+                    console.log('WebSocket disconnected');
+                };
+                
+                this.connection.onerror = function(error) {
+                    console.error('WebSocket error:', error);
+                };
+            },
+            
+            disconnect: function() {
+                if (this.connection) {
+                    this.connection.close();
+                    this.connection = null;
                 }
-            } catch (error) {
-                console.error('Error checking active evaluations:', error);
             }
-        }
-        
-        // Check for active evaluations every 30 seconds
-        setInterval(checkActiveEvaluations, 30000);
-        checkActiveEvaluations(); // Initial check
+        };
     </script>
-    
-    {% block javascript %}{% endblock %}
 </body>
 </html>

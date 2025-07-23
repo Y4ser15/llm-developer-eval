@@ -1,0 +1,430 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div x-data="dashboardManager()" x-init="init()">
+    <!-- Page Header -->
+    <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Results Dashboard</h1>
+        <p class="text-gray-600">Comprehensive analysis of LLM coding evaluation results and performance metrics.</p>
+    </div>
+
+    <!-- Summary Statistics -->
+    <div class="grid md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex items-center">
+                <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
+                    <i class="fas fa-chart-line text-blue-600 text-xl"></i>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-gray-900">{{ benchmark_stats.total_evaluations }}</div>
+                    <div class="text-sm text-gray-600">Total Evaluations</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex items-center">
+                <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mr-4">
+                    <i class="fas fa-robot text-green-600 text-xl"></i>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-gray-900">{{ benchmark_stats.total_models_evaluated }}</div>
+                    <div class="text-sm text-gray-600">Models Evaluated</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex items-center">
+                <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mr-4">
+                    <i class="fas fa-clock text-purple-600 text-xl"></i>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-gray-900">{{ "%.1f"|format(benchmark_stats.average_duration) }}</div>
+                    <div class="text-sm text-gray-600">Avg Duration (s)</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex items-center">
+                <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mr-4">
+                    <i class="fas fa-spinner text-orange-600 text-xl" :class="{'fa-spin': activeEvaluations > 0}"></i>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-gray-900">{{ active_evaluations }}</div>
+                    <div class="text-sm text-gray-600">Active Evaluations</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Current Leaderboard -->
+    {% if leaderboard %}
+    <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-bold text-gray-900">Current Leaderboard</h2>
+            <div class="flex space-x-2">
+                <button @click="sortBy = 'overall_score'" 
+                        :class="sortBy === 'overall_score' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'"
+                        class="px-3 py-1 rounded-md text-sm font-medium">Overall Score</button>
+                <button @click="sortBy = 'pass_rate'" 
+                        :class="sortBy === 'pass_rate' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'"
+                        class="px-3 py-1 rounded-md text-sm font-medium">Pass Rate</button>
+                <button @click="sortBy = 'execution_time'" 
+                        :class="sortBy === 'execution_time' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-700'"
+                        class="px-3 py-1 rounded-md text-sm font-medium">Speed</button>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Model</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Provider</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Overall Score</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pass Rate</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Frontend</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Backend</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Testing</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Time</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for entry in leaderboard %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                {% if entry.rank == 1 %}
+                                <i class="fas fa-crown text-yellow-500 mr-2"></i>
+                                {% elif entry.rank == 2 %}
+                                <i class="fas fa-medal text-gray-400 mr-2"></i>
+                                {% elif entry.rank == 3 %}
+                                <i class="fas fa-medal text-orange-600 mr-2"></i>
+                                {% endif %}
+                                <span class="text-lg font-bold text-gray-900">{{ entry.rank }}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="font-medium text-gray-900">{{ entry.model_name }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                  {% if entry.provider == 'ollama' %}class="bg-blue-100 text-blue-800"
+                                  {% elif entry.provider == 'openai' %}class="bg-green-100 text-green-800"
+                                  {% elif entry.provider == 'anthropic' %}class="bg-purple-100 text-purple-800"
+                                  {% else %}class="bg-gray-100 text-gray-800"{% endif %}>
+                                {{ entry.provider }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="text-lg font-bold text-gray-900">{{ "%.3f"|format(entry.overall_score) }}</div>
+                                <div class="ml-2 w-16 bg-gray-200 rounded-full h-2">
+                                    <div class="bg-indigo-600 h-2 rounded-full" style="width: {{ (entry.overall_score * 100)|round }}%"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="text-sm font-medium text-gray-900">{{ "{:.1%}"|format(entry.pass_rate) }}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="text-sm text-gray-900">{{ "%.3f"|format(entry.domain_scores.get('frontend', 0)) }}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="text-sm text-gray-900">{{ "%.3f"|format(entry.domain_scores.get('backend', 0)) }}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="text-sm text-gray-900">{{ "%.3f"|format(entry.domain_scores.get('testing', 0)) }}</span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="text-sm text-gray-900">{{ "%.1f"|format(entry.execution_time) }}s</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Domain Performance Chart -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-8">
+        <h2 class="text-2xl font-bold text-gray-900 mb-6">Domain Performance Analysis</h2>
+        <div class="grid md:grid-cols-3 gap-6">
+            <!-- Frontend Performance -->
+            <div class="text-center">
+                <h3 class="text-lg font-semibold mb-4 text-blue-600">Frontend Development</h3>
+                <div class="relative w-32 h-32 mx-auto mb-4">
+                    <canvas id="frontendChart"></canvas>
+                </div>
+                <div class="text-sm text-gray-600">
+                    <div>Average: {{ "%.3f"|format(benchmark_stats.domain_performance.frontend.average) }}</div>
+                    <div>Best: {{ "%.3f"|format(benchmark_stats.domain_performance.frontend.max) }}</div>
+                    <div>Models: {{ benchmark_stats.domain_performance.frontend.count }}</div>
+                </div>
+            </div>
+
+            <!-- Backend Performance -->
+            <div class="text-center">
+                <h3 class="text-lg font-semibold mb-4 text-green-600">Backend Development</h3>
+                <div class="relative w-32 h-32 mx-auto mb-4">
+                    <canvas id="backendChart"></canvas>
+                </div>
+                <div class="text-sm text-gray-600">
+                    <div>Average: {{ "%.3f"|format(benchmark_stats.domain_performance.backend.average) }}</div>
+                    <div>Best: {{ "%.3f"|format(benchmark_stats.domain_performance.backend.max) }}</div>
+                    <div>Models: {{ benchmark_stats.domain_performance.backend.count }}</div>
+                </div>
+            </div>
+
+            <!-- Testing Performance -->
+            <div class="text-center">
+                <h3 class="text-lg font-semibold mb-4 text-purple-600">Testing & QA</h3>
+                <div class="relative w-32 h-32 mx-auto mb-4">
+                    <canvas id="testingChart"></canvas>
+                </div>
+                <div class="text-sm text-gray-600">
+                    <div>Average: {{ "%.3f"|format(benchmark_stats.domain_performance.testing.average) }}</div>
+                    <div>Best: {{ "%.3f"|format(benchmark_stats.domain_performance.testing.max) }}</div>
+                    <div>Models: {{ benchmark_stats.domain_performance.testing.count }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- All Evaluation Results -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-bold text-gray-900">All Evaluation Results</h2>
+            <div class="flex items-center space-x-4">
+                <input type="text" x-model="searchQuery" placeholder="Search evaluations..." 
+                       class="border border-gray-300 rounded-md px-3 py-2 text-sm w-64">
+                <button @click="refreshResults()" class="text-indigo-600 hover:text-indigo-800">
+                    <i class="fas fa-sync-alt mr-1"></i>Refresh
+                </button>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Run ID</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Models</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for result in all_results %}
+                    <tr class="hover:bg-gray-50" x-show="matchesSearch('{{ result.run_id }}', '{{ result.timestamp }}')">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="font-mono text-sm text-gray-900">{{ result.run_id[:8] }}...</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {{ result.timestamp[:19]|replace('T', ' ') }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {{ result.model_count }} models
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {{ "%.1f"|format(result.duration) }}s
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if result.status == 'completed' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <i class="fas fa-check-circle mr-1"></i>Completed
+                            </span>
+                            {% elif result.status == 'running' %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                <i class="fas fa-spinner fa-spin mr-1"></i>Running
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                <i class="fas fa-exclamation-circle mr-1"></i>{{ result.status }}
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <div class="flex space-x-2">
+                                <a href="/results/{{ result.run_id }}" 
+                                   class="text-indigo-600 hover:text-indigo-900">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="/results/{{ result.run_id }}/report" 
+                                   class="text-green-600 hover:text-green-900">
+                                    <i class="fas fa-file-alt"></i>
+                                </a>
+                                <button @click="downloadResults('{{ result.run_id }}')" 
+                                        class="text-blue-600 hover:text-blue-900">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                                <button @click="deleteResult('{{ result.run_id }}')" 
+                                        class="text-red-600 hover:text-red-900">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if not all_results %}
+        <div class="text-center py-12">
+            <i class="fas fa-chart-line text-gray-300 text-6xl mb-4"></i>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No evaluations yet</h3>
+            <p class="text-gray-600 mb-4">Start your first evaluation to see results here.</p>
+            <a href="/evaluate" class="bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition duration-200">
+                <i class="fas fa-play mr-2"></i>Start Evaluation
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function dashboardManager() {
+    return {
+        sortBy: 'overall_score',
+        searchQuery: '',
+
+        init() {
+            // Initialize domain performance charts
+            this.$nextTick(() => {
+                this.initCharts();
+            });
+        },
+
+        initCharts() {
+            // Frontend Chart
+            const frontendCtx = document.getElementById('frontendChart');
+            if (frontendCtx) {
+                new Chart(frontendCtx, {
+                    type: 'doughnut',
+                    data: {
+                        datasets: [{
+                            data: [{{ benchmark_stats.domain_performance.frontend.average * 100 }}, {{ 100 - (benchmark_stats.domain_performance.frontend.average * 100) }}],
+                            backgroundColor: ['#3B82F6', '#E5E7EB'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        cutout: '70%'
+                    }
+                });
+            }
+
+            // Backend Chart
+            const backendCtx = document.getElementById('backendChart');
+            if (backendCtx) {
+                new Chart(backendCtx, {
+                    type: 'doughnut',
+                    data: {
+                        datasets: [{
+                            data: [{{ benchmark_stats.domain_performance.backend.average * 100 }}, {{ 100 - (benchmark_stats.domain_performance.backend.average * 100) }}],
+                            backgroundColor: ['#10B981', '#E5E7EB'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        cutout: '70%'
+                    }
+                });
+            }
+
+            // Testing Chart
+            const testingCtx = document.getElementById('testingChart');
+            if (testingCtx) {
+                new Chart(testingCtx, {
+                    type: 'doughnut',
+                    data: {
+                        datasets: [{
+                            data: [{{ benchmark_stats.domain_performance.testing.average * 100 }}, {{ 100 - (benchmark_stats.domain_performance.testing.average * 100) }}],
+                            backgroundColor: ['#8B5CF6', '#E5E7EB'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        cutout: '70%'
+                    }
+                });
+            }
+        },
+
+        matchesSearch(runId, timestamp) {
+            if (!this.searchQuery) return true;
+            const query = this.searchQuery.toLowerCase();
+            return runId.toLowerCase().includes(query) || 
+                   timestamp.toLowerCase().includes(query);
+        },
+
+        async refreshResults() {
+            window.location.reload();
+        },
+
+        async downloadResults(runId) {
+            try {
+                const response = await fetch(`/results/${runId}`);
+                const data = await response.json();
+                
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `evaluation_${runId}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('Download failed:', error);
+                alert('Failed to download results');
+            }
+        },
+
+        async deleteResult(runId) {
+            if (!confirm('Are you sure you want to delete this evaluation result?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/results/${runId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    window.location.reload();
+                } else {
+                    throw new Error('Failed to delete result');
+                }
+            } catch (error) {
+                console.error('Delete failed:', error);
+                alert('Failed to delete result');
+            }
+        }
+    };
+}
+</script>
+{% endblock %}

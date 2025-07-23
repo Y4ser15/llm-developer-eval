@@ -20,12 +20,7 @@ def run_command(command, check=True, cwd=None):
     print(f"Running: {command}")
     try:
         result = subprocess.run(
-            command, 
-            shell=True, 
-            check=check, 
-            capture_output=True, 
-            text=True,
-            cwd=cwd
+            command, shell=True, check=check, capture_output=True, text=True, cwd=cwd
         )
         if result.stdout:
             print(result.stdout)
@@ -53,7 +48,7 @@ def check_docker():
         result = run_command("docker --version", check=False)
         if result.returncode == 0:
             print("✅ Docker is installed")
-            
+
             # Check if Docker daemon is running
             result = run_command("docker info", check=False)
             if result.returncode == 0:
@@ -73,10 +68,10 @@ def check_docker():
 def install_dependencies():
     """Install Python dependencies"""
     print("\n📦 Installing Python dependencies...")
-    
+
     # Upgrade pip first
     run_command(f"{sys.executable} -m pip install --upgrade pip")
-    
+
     # Install requirements
     if Path("requirements.txt").exists():
         run_command(f"{sys.executable} -m pip install -r requirements.txt")
@@ -89,29 +84,27 @@ def install_dependencies():
 def setup_ollama():
     """Set up Ollama and download models"""
     print("\n🚀 Setting up Ollama...")
-    
+
     # Check if Ollama is installed
     result = run_command("ollama --version", check=False)
     if result.returncode != 0:
         print("❌ Ollama is not installed. Please install it from https://ollama.com/")
         return False
-    
+
     print("✅ Ollama is installed")
-    
+
     # Check if Ollama server is running
     result = run_command("curl -s http://localhost:11434/api/tags", check=False)
     if result.returncode != 0:
         print("⚠️  Ollama server is not running. Starting Ollama server...")
-        print("Please run 'ollama serve' in another terminal and press Enter to continue...")
+        print(
+            "Please run 'ollama serve' in another terminal and press Enter to continue..."
+        )
         input()
-    
+
     # Download recommended models
-    models = [
-        "codellama:7b",
-        "deepseek-coder:6.7b", 
-        "qwen2.5-coder:7b"
-    ]
-    
+    models = ["codellama:7b", "deepseek-coder:6.7b", "qwen2.5-coder:7b"]
+
     for model in models:
         print(f"📥 Downloading {model}...")
         result = run_command(f"ollama pull {model}", check=False)
@@ -119,16 +112,16 @@ def setup_ollama():
             print(f"✅ {model} downloaded successfully")
         else:
             print(f"⚠️  Failed to download {model}")
-    
+
     return True
 
 
 def create_directories():
     """Create necessary directories"""
     print("\n📁 Creating directories...")
-    
+
     directories = ["results", "datasets", "src/web/static", "src/web/templates"]
-    
+
     for directory in directories:
         Path(directory).mkdir(parents=True, exist_ok=True)
         print(f"✅ Created {directory}")
@@ -137,7 +130,7 @@ def create_directories():
 def setup_environment():
     """Set up environment variables"""
     print("\n🔧 Setting up environment...")
-    
+
     env_file = Path(".env")
     if not env_file.exists():
         env_content = """# LLM Coding Evaluation Platform Environment Variables
@@ -164,33 +157,31 @@ LOG_LEVEL=INFO
 def test_installation():
     """Test the installation"""
     print("\n🧪 Testing installation...")
-    
+
     try:
         # Test imports
         sys.path.insert(0, str(Path.cwd()))
-        
+
         from src.core.model_interfaces import ModelFactory, ModelConfig
         from src.core.custom_datasets import DatasetManager
         from src.evaluation.evaluation_engine import EvaluationEngine
-        
+
         print("✅ Core modules can be imported")
-        
+
         # Test dataset loading
         dataset_manager = DatasetManager()
         summary = dataset_manager.export_tasks_summary()
         print(f"✅ Loaded {summary['total_tasks']} tasks from datasets")
-        
+
         # Test model interface creation
         config = ModelConfig(
-            name="Test Model",
-            provider="ollama",
-            model_name="codellama:7b"
+            name="Test Model", provider="ollama", model_name="codellama:7b"
         )
         interface = ModelFactory.create_interface(config)
         print("✅ Model interface creation works")
-        
+
         return True
-        
+
     except Exception as e:
         print(f"❌ Installation test failed: {e}")
         return False
@@ -199,66 +190,80 @@ def test_installation():
 def start_server(mode="development"):
     """Start the web server"""
     print(f"\n🌐 Starting web server in {mode} mode...")
-    
+
     if mode == "development":
         print("Starting development server...")
         print("🌐 Web interface will be available at: http://localhost:8000")
         print("📖 API documentation will be available at: http://localhost:8000/docs")
         print("\nPress Ctrl+C to stop the server")
-        
+
         try:
-            run_command(f"{sys.executable} -m uvicorn src.web.app:app --reload --host 0.0.0.0 --port 8000")
+            run_command(
+                f"{sys.executable} -m uvicorn src.web.app:app --reload --host localhost --port 8000"
+            )
         except KeyboardInterrupt:
             print("\n👋 Server stopped")
-    
+
     elif mode == "docker":
         if check_docker():
             print("Starting with Docker...")
             run_command("docker-compose up --build")
         else:
-            print("❌ Docker is not available. Please install Docker or use development mode.")
-    
+            print(
+                "❌ Docker is not available. Please install Docker or use development mode."
+            )
+
     elif mode == "production":
         print("Starting production server...")
-        run_command(f"{sys.executable} -m uvicorn src.web.app:app --host 0.0.0.0 --port 8000")
+        run_command(
+            f"{sys.executable} -m uvicorn src.web.app:app --host localhost --port 8000"
+        )
 
 
 def main():
     parser = argparse.ArgumentParser(description="LLM Coding Evaluation Platform Setup")
-    parser.add_argument("--mode", choices=["setup", "start", "docker", "test"], 
-                       default="setup", help="Mode to run")
-    parser.add_argument("--server-mode", choices=["development", "production", "docker"],
-                       default="development", help="Server mode")
-    parser.add_argument("--skip-ollama", action="store_true", 
-                       help="Skip Ollama setup")
-    parser.add_argument("--skip-deps", action="store_true",
-                       help="Skip dependency installation")
-    
+    parser.add_argument(
+        "--mode",
+        choices=["setup", "start", "docker", "test"],
+        default="setup",
+        help="Mode to run",
+    )
+    parser.add_argument(
+        "--server-mode",
+        choices=["development", "production", "docker"],
+        default="development",
+        help="Server mode",
+    )
+    parser.add_argument("--skip-ollama", action="store_true", help="Skip Ollama setup")
+    parser.add_argument(
+        "--skip-deps", action="store_true", help="Skip dependency installation"
+    )
+
     args = parser.parse_args()
-    
+
     print("🚀 LLM Coding Evaluation Platform Setup")
     print("=" * 50)
-    
+
     # Check Python version
     check_python_version()
-    
+
     if args.mode == "setup":
         print("\n📋 Running full setup...")
-        
+
         # Create directories
         create_directories()
-        
+
         # Install dependencies
         if not args.skip_deps:
             install_dependencies()
-        
+
         # Set up environment
         setup_environment()
-        
+
         # Set up Ollama
         if not args.skip_ollama:
             setup_ollama()
-        
+
         # Test installation
         if test_installation():
             print("\n🎉 Setup completed successfully!")
@@ -269,17 +274,17 @@ def main():
             print("4. Configure your models and start an evaluation!")
         else:
             print("\n❌ Setup completed with errors. Please check the logs above.")
-    
+
     elif args.mode == "start":
         start_server(args.server_mode)
-    
+
     elif args.mode == "docker":
         if check_docker():
             print("\n🐳 Starting with Docker...")
             run_command("docker-compose up --build")
         else:
             print("❌ Docker setup failed")
-    
+
     elif args.mode == "test":
         if test_installation():
             print("\n✅ All tests passed!")
