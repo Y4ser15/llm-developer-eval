@@ -61,11 +61,15 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
             await asyncio.sleep(1)
             # Send simple keep-alive
             if active_evaluations[client_id]["status"] == "completed":
-                await websocket.send_text(json.dumps({
-                    "type": "progress", 
-                    "message": f"🎉 Evaluation completed! Run ID: {active_evaluations[client_id].get('run_id', 'unknown')}", 
-                    "progress": 100
-                }))
+                await websocket.send_text(
+                    json.dumps(
+                        {
+                            "type": "progress",
+                            "message": f"🎉 Evaluation completed! Run ID: {active_evaluations[client_id].get('run_id', 'unknown')}",
+                            "progress": 100,
+                        }
+                    )
+                )
                 break
     except:
         pass
@@ -97,16 +101,16 @@ class SimpleEvaluationRequest(BaseModel):
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
     """Home page"""
-    
+
     # Get recent evaluation results
     recent_results = evaluator.list_evaluation_results()[:5]
-    
+
     # Get available models count
     available_models = _get_available_models()
-    
+
     # Get benchmark status
     humaneval_available = orchestrator.humaneval.available
-    
+
     return templates.TemplateResponse(
         "comprehensive_home.html",
         {
@@ -116,79 +120,122 @@ async def home(request: Request):
             "available_models": len(available_models),
             "bigcodebench_available": False,  # We don't use this
             "humaneval_available": humaneval_available,
-            "total_evaluations": len(recent_results)
-        }
+            "total_evaluations": len(recent_results),
+        },
     )
 
 
 @app.get("/evaluate", response_class=HTMLResponse)
 async def evaluate_page(request: Request):
     """Evaluation configuration page"""
-    
+
     # Get available models
     available_models = _get_available_models()
-    
+
     return templates.TemplateResponse(
         "comprehensive_evaluate.html",
         {
             "request": request,
             "title": "Start Evaluation",
             "available_models": available_models,
-            "supported_domains": ["frontend", "backend", "testing"]
-        }
+            "supported_domains": ["frontend", "backend", "testing"],
+        },
     )
 
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request):
     """Results dashboard"""
-    
+
     # Get all evaluation results
     try:
         all_results = evaluator.list_evaluation_results()
     except Exception as e:
         logger.error(f"Failed to list evaluation results: {e}")
         all_results = []
-    
+
     # Get latest leaderboard
     leaderboard = []
     if all_results:
         latest_result_file = all_results[0]["file_path"]
         try:
-            with open(latest_result_file, 'r') as f:
+            with open(latest_result_file, "r") as f:
                 data = json.load(f)
                 leaderboard = data.get("leaderboard", [])
-                
+
                 # If no leaderboard in the data, create one from models
                 if not leaderboard and "models" in data:
                     leaderboard = []
                     for i, model in enumerate(data["models"]):
                         summary = model.get("summary", {})
-                        leaderboard.append({
-                            "rank": i + 1,
-                            "model_name": model.get("model_name", "Unknown"),
-                            "provider": model.get("provider", "Unknown"),
-                            "overall_score": summary.get("overall_score", 0),
-                            "pass_rate": summary.get("passed_tasks", 0) / max(summary.get("total_tasks", 1), 1),
-                            "domain_scores": summary.get("domain_scores", {}),
-                            "execution_time": summary.get("execution_time", 0)
-                        })
+                        leaderboard.append(
+                            {
+                                "rank": i + 1,
+                                "model_name": model.get("model_name", "Unknown"),
+                                "provider": model.get("provider", "Unknown"),
+                                "overall_score": summary.get("overall_score", 0),
+                                "pass_rate": summary.get("passed_tasks", 0)
+                                / max(summary.get("total_tasks", 1), 1),
+                                "domain_scores": summary.get("domain_scores", {}),
+                                "execution_time": summary.get("execution_time", 0),
+                            }
+                        )
         except Exception as e:
             logger.error(f"Failed to load latest results: {e}")
             leaderboard = []
-    
+
     # Simple benchmark statistics
+    # Compute max for each domain from leaderboard
+    domain_max = {"frontend": 0, "backend": 0, "testing": 0}
+    domain_sum = {"frontend": 0, "backend": 0, "testing": 0}
+    domain_count = {"frontend": 0, "backend": 0, "testing": 0}
+    for entry in leaderboard:
+        domain_scores = entry.get("domain_scores", {})
+        for domain in ["frontend", "backend", "testing"]:
+            score = domain_scores.get(domain, 0)
+            if score > domain_max[domain]:
+                domain_max[domain] = score
+            domain_sum[domain] += score
+            domain_count[domain] += 1 if score > 0 else 0
+
     benchmark_stats = {
         "total_evaluations": len(all_results),
-        "total_models_evaluated": sum(result.get("model_count", 0) for result in all_results),
-        "average_duration": sum(result.get("duration", 0) for result in all_results) / max(len(all_results), 1),
+        "total_models_evaluated": sum(
+            result.get("model_count", 0) for result in all_results
+        ),
+        "average_duration": sum(result.get("duration", 0) for result in all_results)
+        / max(len(all_results), 1),
         "domain_performance": {
-            "frontend": {"average": 0, "count": 0},
-            "backend": {"average": 0, "count": 0},
-            "testing": {"average": 0, "count": 0}
-        }
+            "frontend": {
+                "average": (
+                    domain_sum["frontend"] / domain_count["frontend"]
+                    if domain_count["frontend"]
+                    else 0
+                ),
+                "max": domain_max["frontend"],
+                "count": domain_count["frontend"],
+            },
+            "backend": {
+                "average": (
+                    domain_sum["backend"] / domain_count["backend"]
+                    if domain_count["backend"]
+                    else 0
+                ),
+                "max": domain_max["backend"],
+                "count": domain_count["backend"],
+            },
+            "testing": {
+                "average": (
+                    domain_sum["testing"] / domain_count["testing"]
+                    if domain_count["testing"]
+                    else 0
+                ),
+                "max": domain_max["testing"],
+                "count": domain_count["testing"],
+            },
+        },
     }
-    
+
     return templates.TemplateResponse(
         "comprehensive_dashboard.html",
         {
@@ -197,29 +244,29 @@ async def dashboard(request: Request):
             "leaderboard": leaderboard,
             "all_results": all_results,
             "benchmark_stats": benchmark_stats,
-            "active_evaluations": len(active_evaluations)
-        }
+            "active_evaluations": len(active_evaluations),
+        },
     )
 
 
 @app.get("/results/{run_id}")
 async def get_evaluation_result(request: Request, run_id: str):
     """Get specific evaluation result"""
-    
+
     try:
         result_file = evaluator.results_dir / f"comprehensive_results_{run_id}.json"
         if result_file.exists():
-            with open(result_file, 'r') as f:
+            with open(result_file, "r") as f:
                 data = json.load(f)
-            
+
             return templates.TemplateResponse(
                 "evaluation_result.html",
                 {
                     "request": request,
                     "title": f"Evaluation Results - {run_id}",
                     "result_data": data,
-                    "run_id": run_id
-                }
+                    "run_id": run_id,
+                },
             )
         else:
             raise HTTPException(status_code=404, detail="Evaluation result not found")
@@ -230,7 +277,7 @@ async def get_evaluation_result(request: Request, run_id: str):
 @app.get("/results/{run_id}/report")
 async def get_evaluation_report(run_id: str):
     """Get HTML report for evaluation"""
-    
+
     report_file = evaluator.results_dir / f"comprehensive_report_{run_id}.html"
     if report_file.exists():
         return FileResponse(report_file, media_type="text/html")
@@ -240,85 +287,84 @@ async def get_evaluation_report(run_id: str):
 
 @app.post("/api/evaluate")
 async def start_evaluation(
-    evaluation_request: SimpleEvaluationRequest,
-    background_tasks: BackgroundTasks
+    evaluation_request: SimpleEvaluationRequest, background_tasks: BackgroundTasks
 ):
     """Start evaluation in background - NO PROGRESS CALLBACKS"""
-    
+
     try:
         # Convert request to internal format
         model_configs = []
         for model_req in evaluation_request.model_configs:
             config = ModelConfig(**model_req.dict())
             model_configs.append(config)
-        
+
         eval_config = EvaluationConfig(
             domains=evaluation_request.domains,
             max_tasks_per_domain=evaluation_request.max_tasks_per_domain,
             include_humaneval=evaluation_request.include_humaneval,
             generate_report=evaluation_request.generate_report,
-            save_results=True
+            save_results=True,
         )
-        
+
         # Generate client ID
         client_id = f"eval_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        
+
         # Start evaluation in background
         background_tasks.add_task(
-            run_simple_evaluation_task,
-            model_configs,
-            eval_config,
-            client_id
+            run_simple_evaluation_task, model_configs, eval_config, client_id
         )
-        
+
         # Track active evaluation
         active_evaluations[client_id] = {
             "status": "started",
             "timestamp": datetime.now().isoformat(),
             "models": [config.name for config in model_configs],
-            "domains": evaluation_request.domains
+            "domains": evaluation_request.domains,
         }
-        
+
         return {
             "status": "started",
             "message": "Evaluation started successfully",
             "client_id": client_id,
-            "estimated_duration": len(model_configs) * len(evaluation_request.domains) * evaluation_request.max_tasks_per_domain * 2  # 2 seconds per task estimate
+            "estimated_duration": len(model_configs)
+            * len(evaluation_request.domains)
+            * evaluation_request.max_tasks_per_domain
+            * 2,  # 2 seconds per task estimate
         }
-        
+
     except Exception as e:
         logger.error(f"Failed to start evaluation: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 async def run_simple_evaluation_task(
-    model_configs: List[ModelConfig],
-    eval_config: EvaluationConfig,
-    client_id: str
+    model_configs: List[ModelConfig], eval_config: EvaluationConfig, client_id: str
 ):
     """Run evaluation task in background - NO PROGRESS CALLBACKS"""
-    
+
     try:
         logger.info(f"🚀 Starting evaluation task {client_id}")
-        
+
         # Update status
         active_evaluations[client_id]["status"] = "running"
-        
+
         # Run evaluation (no progress callbacks)
         evaluation_run = await evaluator.evaluate_models(model_configs, eval_config)
-        
+
         # Update status
         active_evaluations[client_id]["status"] = "completed"
         active_evaluations[client_id]["run_id"] = evaluation_run.run_id
         active_evaluations[client_id]["duration"] = evaluation_run.total_duration
-        
-        logger.info(f"✅ Evaluation task {client_id} completed: {evaluation_run.run_id}")
-        
+
+        logger.info(
+            f"✅ Evaluation task {client_id} completed: {evaluation_run.run_id}"
+        )
+
     except Exception as e:
         logger.error(f"❌ Evaluation task {client_id} failed: {e}")
         active_evaluations[client_id]["status"] = "failed"
         active_evaluations[client_id]["error"] = str(e)
-    
+
     finally:
         # Clean up after delay
         await asyncio.sleep(300)  # Keep status for 5 minutes
@@ -330,25 +376,28 @@ async def run_simple_evaluation_task(
 async def discover_models():
     """Discover actually available models"""
     discovered = []
-    
+
     # Check Ollama models
     try:
         import requests
+
         response = requests.get("http://localhost:11434/api/tags", timeout=5)
         if response.status_code == 200:
             ollama_models = response.json().get("models", [])
             for model in ollama_models:
-                discovered.append({
-                    "name": f"Ollama - {model['name']}",
-                    "provider": "ollama",
-                    "model_name": model['name'],
-                    "base_url": "http://localhost:11434",
-                    "available": True,
-                    "discovered": True
-                })
+                discovered.append(
+                    {
+                        "name": f"Ollama - {model['name']}",
+                        "provider": "ollama",
+                        "model_name": model["name"],
+                        "base_url": "http://localhost:11434",
+                        "available": True,
+                        "discovered": True,
+                    }
+                )
     except Exception as e:
         logger.debug(f"Ollama not available: {e}")
-    
+
     return {"discovered_models": discovered}
 
 
@@ -364,16 +413,16 @@ async def huggingface_login(request: Request):
     try:
         form_data = await request.form()
         token = form_data.get("token")
-        
+
         if not token:
             raise HTTPException(status_code=400, detail="Token is required")
-        
+
         return {
             "status": "success",
             "message": "Token accepted (not needed for HumanEval)",
-            "user": "user"
+            "user": "user",
         }
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -383,7 +432,7 @@ async def huggingface_status():
     """Check HuggingFace authentication status - SIMPLIFIED"""
     return {
         "authenticated": True,  # Always true since we don't need HF for HumanEval
-        "user": "user"
+        "user": "user",
     }
 
 
@@ -393,9 +442,9 @@ async def get_benchmark_status():
     datasets_status = await orchestrator.dataset_manager.get_available_datasets()
     return {
         "humaneval": {
-            "available": datasets_status.get('humaneval', False),
+            "available": datasets_status.get("humaneval", False),
             "description": "164 Python programming problems (streaming)",
-            "domains": ["general"]
+            "domains": ["general"],
         }
     }
 
@@ -424,55 +473,57 @@ async def get_all_results():
 # Utility functions
 def _get_available_models() -> List[Dict[str, Any]]:
     """Get list of available model configurations"""
-    
+
     models = []
-    
+
     # Add API models (check env vars)
     api_models = [
         {
             "name": "GPT-4 Turbo",
             "provider": "openai",
             "model_name": "gpt-4-turbo-preview",
-            "available": bool(os.getenv("OPENAI_API_KEY"))
+            "available": bool(os.getenv("OPENAI_API_KEY")),
         },
         {
             "name": "GPT-4o",
             "provider": "openai",
             "model_name": "gpt-4o",
-            "available": bool(os.getenv("OPENAI_API_KEY"))
+            "available": bool(os.getenv("OPENAI_API_KEY")),
         },
         {
             "name": "Claude 3.5 Sonnet",
             "provider": "anthropic",
             "model_name": "claude-3-5-sonnet-20241022",
-            "available": bool(os.getenv("ANTHROPIC_API_KEY"))
-        }
-    ]
-    
-    models.extend(api_models)
-    
-    # Add configurable servers
-    models.extend([
-        {
-            "name": "vLLM Server (Configure)",
-            "provider": "vllm",
-            "model_name": "configure-vllm",
-            "base_url": "http://localhost:8000",
-            "available": True,
-            "configurable": True,
-            "description": "Add your vLLM server endpoint"
+            "available": bool(os.getenv("ANTHROPIC_API_KEY")),
         },
-        {
-            "name": "Custom Server (Configure)",
-            "provider": "custom",
-            "model_name": "configure-custom",
-            "base_url": "http://localhost:8000",
-            "available": True,
-            "configurable": True,
-            "description": "Add your custom LLM API endpoint"
-        }
-    ])
-    
+    ]
+
+    models.extend(api_models)
+
+    # Add configurable servers
+    models.extend(
+        [
+            {
+                "name": "vLLM Server (Configure)",
+                "provider": "vllm",
+                "model_name": "configure-vllm",
+                "base_url": "http://localhost:8000",
+                "available": True,
+                "configurable": True,
+                "description": "Add your vLLM server endpoint",
+            },
+            {
+                "name": "Custom Server (Configure)",
+                "provider": "custom",
+                "model_name": "configure-custom",
+                "base_url": "http://localhost:8000",
+                "available": True,
+                "configurable": True,
+                "description": "Add your custom LLM API endpoint",
+            },
+        ]
+    )
+
     return models
 
 
@@ -484,10 +535,11 @@ async def health_check():
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
         "humaneval_available": orchestrator.humaneval.available,
-        "active_evaluations": len(active_evaluations)
+        "active_evaluations": len(active_evaluations),
     }
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="localhost", port=8000, reload=True)
