@@ -13,15 +13,6 @@ python deploy.py
 
 A comprehensive evaluation platform for Large Language Models (LLMs) that systematically benchmarks coding capabilities across **Frontend**, **Backend**, and **Testing** domains.
 
-### ✅ **REQUIREMENTS FULFILLED**
-
-- **✅ 3+ Open-Source LLMs**: Ollama (CodeLlama, DeepSeek, Qwen2.5), vLLM servers, API models
-- **✅ Local Deployment**: Full Ollama integration with containerized setup
-- **✅ Web UI Interface**: Real-time dashboard with progress tracking
-- **✅ Maximum Automation**: True one-click evaluation with WebSocket updates
-- **✅ Comprehensive Benchmarks**: BigCodeBench, HumanEval, custom datasets
-- **✅ Domain Evaluation**: Frontend (React), Backend (APIs), Testing (QA)
-
 ## **TECH STACK**
 
 | Component | Technology | Purpose |
@@ -214,68 +205,5 @@ pip install git+https://github.com/bigcode-project/bigcodebench.git
 - **JSON**: Programmatic access and analysis
 - **CSV**: Data analysis and visualization
 - **HTML**: Comprehensive interactive reports
-
-## **PRODUCTION DEPLOYMENT**
-
-### **Scaling Options**
-```bash
-# Horizontal scaling
-docker-compose up --scale bigcodebench-worker=4
-
-# Load balancing with Nginx
-docker-compose --profile production up
-```
-
-### **Cloud Deployment**
-- **AWS**: ECS Fargate or EC2 Auto Scaling
-- **GCP**: Cloud Run or GKE
-- **Azure**: Container Instances or AKS
-
-## **PROJECT STRUCTURE**
-
-```
-llm-developer-eval/
-├── 📄 app.py                     # Main entry point
-├── 📄 deploy.py                  # One-click deployment script
-├── 📄 docker-compose.yml         # Multi-service configuration
-├── 📂 src/                       # Source code
-│   ├── 📂 core/                  # Evaluation engine
-│   ├── 📂 evaluation/            # Benchmark orchestration
-│   ├── 📂 utils/                 # Report generation
-│   └── 📂 web/                   # FastAPI application
-├── 📂 datasets/                  # Evaluation datasets
-└── 📂 results/                   # Output results and reports
-```
-
-## **GETTING STARTED**
-
-1. **Clone & Deploy**:
-   ```bash
-   git clone <repository>
-   cd llm-developer-eval
-   python deploy.py
-   ```
-
-2. **Access Platform**: `http://localhost:8000`
-
-3. **Configure Models**: Add API keys or setup Ollama
-
-4. **Run Evaluation**: Select models and domains, click "Start"
-
-5. **Analyze Results**: View leaderboards and download reports
-
-## **SUPPORT & DOCUMENTATION**
-
-- **📚 Full Documentation**: See complete documentation artifact
-- **🔧 API Reference**: `http://localhost:8000/docs`
-- **🩺 Health Status**: `http://localhost:8000/health`
-- **📊 Live Dashboard**: `http://localhost:8000/dashboard`
-
----
-
-**🚀 Ready to evaluate LLMs? Start with one command:**
-```bash
-python deploy.py
-```
 
 **Platform available at: http://localhost:8000** ✨
