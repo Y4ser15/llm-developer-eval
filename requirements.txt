@@ -42,6 +42,7 @@ flake8>=6.0.0
 evaluate>=0.4.0
 
 # Code Execution & Sandboxing
+e2b_code_interpreter>=0.0.6
 docker>=6.1.0
 subprocess32>=3.5.4; python_version < '3.3'
 
