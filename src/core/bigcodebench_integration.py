@@ -66,29 +66,71 @@ class BigCodeBenchIntegration:
             self.bigcodebench_available = False
     
     def get_tasks(self, subset: str = "complete", domain_filter: Optional[str] = None) -> List[Dict]:
-        """Get BigCodeBench tasks with optional domain filtering"""
+        """Get BigCodeBench tasks with proper authentication handling"""
         if not self.bigcodebench_available:
-            # Return mock tasks if BigCodeBench not available
+            logger.warning("BigCodeBench not available, using mock tasks")
             return self._get_mock_tasks(domain_filter)
         
         try:
-            # Try to get BigCodeBench tasks
-            from bigcodebench.data import get_bigcodebench
-            tasks = get_bigcodebench(subset=subset)
+            # First try to access the dataset directly
+            from datasets import load_dataset
             
-            if domain_filter:
-                # Filter tasks by domain based on task content/libraries
-                filtered_tasks = {}
-                for task_id, task in tasks.items():
-                    if self._matches_domain(task, domain_filter):
-                        filtered_tasks[task_id] = task
-                return filtered_tasks
-            
-            return tasks
-            
+            # Try to load the dataset with authentication
+            try:
+                # Try with different dataset names and authentication
+                dataset_names = [
+                    "bigcode/bigcodebench",
+                    "bigcode/bigcodebench-complete", 
+                    "bigcode/bigcodebench-instruct"
+                ]
+                
+                dataset = None
+                for name in dataset_names:
+                    try:
+                        logger.info(f"Attempting to load dataset: {name}")
+                        dataset = load_dataset(name, split="test")
+                        logger.info(f"Successfully loaded dataset: {name}")
+                        break
+                    except Exception as e:
+                        logger.debug(f"Failed to load {name}: {e}")
+                        continue
+                
+                if dataset is None:
+                    raise Exception("No BigCodeBench dataset accessible")
+                
+                # Convert to the expected format
+                tasks = {}
+                for i, item in enumerate(dataset):
+                    task_id = item.get('task_id', f'bigcodebench_{i}')
+                    tasks[task_id] = {
+                        'task_id': task_id,
+                        'prompt': item.get('prompt', item.get('instruction', '')),
+                        'canonical_solution': item.get('canonical_solution', ''),
+                        'test': item.get('test', ''),
+                        'entry_point': item.get('entry_point', 'main'),
+                        'libraries': item.get('libraries', []),
+                        'difficulty': item.get('difficulty', 'medium')
+                    }
+                
+                # Apply domain filtering if requested
+                if domain_filter:
+                    filtered_tasks = {}
+                    for task_id, task in tasks.items():
+                        if self._matches_domain(task, domain_filter):
+                            filtered_tasks[task_id] = task
+                    return list(filtered_tasks.values())
+                
+                logger.info(f"Loaded {len(tasks)} BigCodeBench tasks")
+                return list(tasks.values())
+                
+            except Exception as e:
+                logger.error(f"Failed to access BigCodeBench dataset: {e}")
+                logger.info("You may need to authenticate with HuggingFace: `huggingface-cli login`")
+                raise e
+                
         except Exception as e:
             logger.error(f"Failed to get BigCodeBench tasks: {e}")
-            # Fallback to mock tasks
+            logger.warning("Falling back to mock tasks for demonstration")
             return self._get_mock_tasks(domain_filter)
     
     def _get_mock_tasks(self, domain_filter: Optional[str] = None) -> List[Dict]:

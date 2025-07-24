@@ -1,14 +1,14 @@
-# src/evaluation/comprehensive_evaluator.py
+# src/evaluation/simple_evaluator.py
 """
-Comprehensive LLM Coding Evaluation Engine
-Integrates multiple benchmarks and provides unified evaluation interface.
+SIMPLE LLM Coding Evaluation Engine - NO PROGRESS CALLBACKS
+Focus on working evaluation without progress complexity.
 """
 
 import asyncio
 import logging
 import time
 from datetime import datetime
-from typing import Dict, List, Optional, Any, Callable
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 import json
 from pathlib import Path
@@ -29,12 +29,10 @@ class EvaluationConfig:
     domains: List[str] = field(default_factory=lambda: ["frontend", "backend", "testing"])
     
     # Benchmark selection
-    include_bigcodebench: bool = True
     include_humaneval: bool = True
-    include_custom_datasets: bool = True
     
     # Task limits
-    max_tasks_per_domain: int = 10
+    max_tasks_per_domain: int = 5
     max_total_tasks: int = 50
     
     # Execution settings
@@ -44,7 +42,7 @@ class EvaluationConfig:
     # Output settings
     generate_report: bool = True
     save_results: bool = True
-    export_format: str = "json"  # json, csv, html
+    export_format: str = "json"
 
 
 @dataclass
@@ -55,9 +53,8 @@ class ModelEvaluationResult:
     model_config: Dict[str, Any]
     
     # Benchmark results
-    bigcodebench_results: Dict[str, List[EvaluationResult]] = field(default_factory=dict)
+    domain_results: Dict[str, List[EvaluationResult]] = field(default_factory=dict)
     humaneval_results: List[EvaluationResult] = field(default_factory=list)
-    custom_results: List[Any] = field(default_factory=list)
     
     # Summary metrics
     total_tasks: int = 0
@@ -111,7 +108,7 @@ class ComprehensiveEvaluationRun:
 
 
 class ComprehensiveEvaluator:
-    """Main evaluation orchestrator for comprehensive LLM coding evaluation"""
+    """SIMPLE evaluation orchestrator - NO PROGRESS CALLBACKS"""
     
     def __init__(self, results_dir: str = "results"):
         self.orchestrator = SimpleBenchmarkOrchestrator()
@@ -125,10 +122,9 @@ class ComprehensiveEvaluator:
     async def evaluate_models(
         self,
         model_configs: List[ModelConfig],
-        config: EvaluationConfig = None,
-        progress_callback: Optional[Callable] = None
+        config: EvaluationConfig = None
     ) -> ComprehensiveEvaluationRun:
-        """Run comprehensive evaluation across multiple models"""
+        """Run comprehensive evaluation across multiple models - NO PROGRESS CALLBACKS"""
         
         config = config or EvaluationConfig()
         run_id = str(uuid.uuid4())
@@ -144,23 +140,10 @@ class ComprehensiveEvaluator:
         start_time = time.time()
         
         try:
-            logger.info(f"Starting comprehensive evaluation {run_id} with {len(model_configs)} models")
+            logger.info(f"🚀 Starting comprehensive evaluation {run_id} with {len(model_configs)} models")
             
-            if progress_callback:
-                if asyncio.iscoroutinefunction(progress_callback):
-                    await progress_callback(f"Starting evaluation of {len(model_configs)} models...")
-                else:
-                    progress_callback(f"Starting evaluation of {len(model_configs)} models...")
-            
-            # Evaluate models
-            if config.parallel_models:
-                results = await self._evaluate_models_parallel(
-                    model_configs, config, progress_callback
-                )
-            else:
-                results = await self._evaluate_models_sequential(
-                    model_configs, config, progress_callback
-                )
+            # Evaluate models sequentially (no parallel for simplicity)
+            results = await self._evaluate_models_sequential(model_configs, config)
             
             evaluation_run.model_results = results
             evaluation_run.total_duration = time.time() - start_time
@@ -174,12 +157,12 @@ class ComprehensiveEvaluator:
             if config.save_results:
                 self._save_evaluation_results(evaluation_run, config.export_format)
             
-            logger.info(f"Evaluation {run_id} completed in {evaluation_run.total_duration:.2f}s")
+            logger.info(f"✅ Evaluation {run_id} completed in {evaluation_run.total_duration:.2f}s")
             
         except Exception as e:
             evaluation_run.status = "failed"
             evaluation_run.total_duration = time.time() - start_time
-            logger.error(f"Evaluation {run_id} failed: {e}")
+            logger.error(f"❌ Evaluation {run_id} failed: {e}")
             raise
         
         finally:
@@ -191,28 +174,21 @@ class ComprehensiveEvaluator:
     async def _evaluate_models_sequential(
         self,
         model_configs: List[ModelConfig],
-        config: EvaluationConfig,
-        progress_callback: Optional[Callable]
+        config: EvaluationConfig
     ) -> List[ModelEvaluationResult]:
-        """Evaluate models sequentially"""
+        """Evaluate models sequentially - NO PROGRESS CALLBACKS"""
         
         results = []
         
         for i, model_config in enumerate(model_configs):
-            if progress_callback:
-                if asyncio.iscoroutinefunction(progress_callback):
-                    await progress_callback(f"Evaluating model {i+1}/{len(model_configs)}: {model_config.name}")
-                else:
-                    progress_callback(f"Evaluating model {i+1}/{len(model_configs)}: {model_config.name}")
+            logger.info(f"📋 Evaluating model {i+1}/{len(model_configs)}: {model_config.name}")
             
             try:
-                model_result = await self._evaluate_single_model(
-                    model_config, config, progress_callback
-                )
+                model_result = await self._evaluate_single_model(model_config, config)
                 results.append(model_result)
                 
             except Exception as e:
-                logger.error(f"Failed to evaluate model {model_config.name}: {e}")
+                logger.error(f"❌ Failed to evaluate model {model_config.name}: {e}")
                 # Create failed result
                 failed_result = ModelEvaluationResult(
                     model_name=model_config.name,
@@ -224,49 +200,12 @@ class ComprehensiveEvaluator:
         
         return results
     
-    async def _evaluate_models_parallel(
-        self,
-        model_configs: List[ModelConfig],
-        config: EvaluationConfig,
-        progress_callback: Optional[Callable]
-    ) -> List[ModelEvaluationResult]:
-        """Evaluate models in parallel"""
-        
-        semaphore = asyncio.Semaphore(3)  # Limit concurrent evaluations
-        
-        async def evaluate_with_semaphore(model_config: ModelConfig) -> ModelEvaluationResult:
-            async with semaphore:
-                return await self._evaluate_single_model(model_config, config, progress_callback)
-        
-        # Create tasks
-        tasks = [evaluate_with_semaphore(config) for config in model_configs]
-        
-        # Execute with exception handling
-        results = []
-        completed_tasks = await asyncio.gather(*tasks, return_exceptions=True)
-        
-        for i, result in enumerate(completed_tasks):
-            if isinstance(result, Exception):
-                logger.error(f"Model {model_configs[i].name} failed: {result}")
-                failed_result = ModelEvaluationResult(
-                    model_name=model_configs[i].name,
-                    provider=model_configs[i].provider,
-                    model_config=model_configs[i].dict(),
-                    errors=[str(result)]
-                )
-                results.append(failed_result)
-            else:
-                results.append(result)
-        
-        return results
-    
     async def _evaluate_single_model(
         self,
         model_config: ModelConfig,
-        config: EvaluationConfig,
-        progress_callback: Optional[Callable]
+        config: EvaluationConfig
     ) -> ModelEvaluationResult:
-        """Evaluate a single model comprehensively"""
+        """Evaluate a single model comprehensively - NO PROGRESS CALLBACKS"""
         
         start_time = time.time()
         
@@ -284,36 +223,26 @@ class ComprehensiveEvaluator:
         )
         
         try:
-            # BigCodeBench evaluation
-            if config.include_bigcodebench:
-                if progress_callback:
-                    progress_callback(f"Running BigCodeBench evaluation for {model_config.name}")
-                
-                bigcodebench_results = await self.orchestrator.run_comprehensive_evaluation(
-                    model_interface,
-                    domains=config.domains,
-                    include_humaneval=False,  # Handle separately
-                    max_tasks_per_domain=config.max_tasks_per_domain,
-                    progress_callback=progress_callback
-                )
-                result.bigcodebench_results = bigcodebench_results
+            logger.info(f"🔍 Running comprehensive evaluation for {model_config.name}")
             
-            # HumanEval evaluation
-            if config.include_humaneval:
-                if progress_callback:
-                    progress_callback(f"Running HumanEval evaluation for {model_config.name}")
-                
-                humaneval_results = await self.orchestrator.humaneval.evaluate_model(
-                    model_interface,
-                    max_tasks=config.max_tasks_per_domain
-                )
-                result.humaneval_results = humaneval_results
+            # Run comprehensive evaluation using our simple orchestrator
+            evaluation_results = await self.orchestrator.run_comprehensive_evaluation(
+                model_interface,
+                domains=config.domains,
+                include_humaneval=config.include_humaneval,
+                max_tasks_per_domain=config.max_tasks_per_domain
+            )
+            
+            # Store results
+            result.domain_results = evaluation_results
             
             # Calculate summary metrics
             self._calculate_summary_metrics(result)
             
+            logger.info(f"✅ Completed evaluation for {model_config.name}: {result.passed_tasks}/{result.total_tasks} passed")
+            
         except Exception as e:
-            logger.error(f"Evaluation failed for {model_config.name}: {e}")
+            logger.error(f"❌ Evaluation failed for {model_config.name}: {e}")
             result.errors.append(str(e))
         
         result.execution_time = time.time() - start_time
@@ -324,10 +253,9 @@ class ComprehensiveEvaluator:
         
         all_results = []
         
-        # Collect all benchmark results
-        for domain_results in result.bigcodebench_results.values():
+        # Collect all results
+        for domain_name, domain_results in result.domain_results.items():
             all_results.extend(domain_results)
-        all_results.extend(result.humaneval_results)
         
         if not all_results:
             return
@@ -338,18 +266,12 @@ class ComprehensiveEvaluator:
         result.overall_score = sum(r.score for r in all_results) / result.total_tasks
         
         # Domain-specific scores
-        for domain in ["frontend", "backend", "testing"]:
-            domain_key = f"bigcodebench_{domain}"
-            if domain_key in result.bigcodebench_results:
-                domain_results = result.bigcodebench_results[domain_key]
-                if domain_results:
-                    domain_score = sum(r.score for r in domain_results) / len(domain_results)
-                    result.domain_scores[domain] = domain_score
-        
-        # HumanEval score
-        if result.humaneval_results:
-            humaneval_score = sum(r.score for r in result.humaneval_results) / len(result.humaneval_results)
-            result.domain_scores["humaneval"] = humaneval_score
+        for domain_name, domain_results in result.domain_results.items():
+            if domain_results:
+                domain_score = sum(r.score for r in domain_results) / len(domain_results)
+                # Clean up domain name for display
+                clean_domain = domain_name.replace("public_", "")
+                result.domain_scores[clean_domain] = domain_score
     
     async def _generate_comprehensive_report(self, evaluation_run: ComprehensiveEvaluationRun):
         """Generate comprehensive HTML report"""
@@ -362,10 +284,10 @@ class ComprehensiveEvaluator:
                 evaluation_run, str(report_path)
             )
             
-            logger.info(f"Generated comprehensive report: {report_path}")
+            logger.info(f"📊 Generated comprehensive report: {report_path}")
             
         except Exception as e:
-            logger.error(f"Failed to generate report: {e}")
+            logger.error(f"❌ Failed to generate report: {e}")
     
     def _save_evaluation_results(self, evaluation_run: ComprehensiveEvaluationRun, format: str = "json"):
         """Save evaluation results in specified format"""
@@ -400,35 +322,15 @@ class ComprehensiveEvaluator:
                 }
                 export_data["models"].append(model_data)
             
-            # Save in requested format
+            # Save in JSON format
             if format == "json":
                 with open(f"{base_path}.json", 'w') as f:
                     json.dump(export_data, f, indent=2, default=str)
             
-            elif format == "csv":
-                import pandas as pd
-                
-                # Create leaderboard CSV
-                df = pd.DataFrame(export_data["leaderboard"])
-                df.to_csv(f"{base_path}_leaderboard.csv", index=False)
-                
-                # Create detailed results CSV
-                detailed_data = []
-                for model in export_data["models"]:
-                    row = {
-                        "model_name": model["model_name"],
-                        "provider": model["provider"],
-                        **model["summary"]
-                    }
-                    detailed_data.append(row)
-                
-                detailed_df = pd.DataFrame(detailed_data)
-                detailed_df.to_csv(f"{base_path}_detailed.csv", index=False)
-            
-            logger.info(f"Saved evaluation results: {base_path}.{format}")
+            logger.info(f"💾 Saved evaluation results: {base_path}.{format}")
             
         except Exception as e:
-            logger.error(f"Failed to save results: {e}")
+            logger.error(f"❌ Failed to save results: {e}")
     
     def get_evaluation_status(self, run_id: str) -> Optional[Dict[str, Any]]:
         """Get status of running evaluation"""
@@ -467,55 +369,3 @@ class ComprehensiveEvaluator:
         # Sort by timestamp (newest first)
         results.sort(key=lambda x: x["timestamp"], reverse=True)
         return results
-
-
-# Example usage
-if __name__ == "__main__":
-    import asyncio
-    from ..core.model_interfaces import ModelConfig
-    
-    async def main():
-        # Create evaluator
-        evaluator = ComprehensiveEvaluator()
-        
-        # Define models to evaluate
-        model_configs = [
-            ModelConfig(
-                name="CodeLlama 7B",
-                provider="ollama",
-                model_name="codellama:7b"
-            ),
-            ModelConfig(
-                name="DeepSeek Coder 6.7B",
-                provider="ollama",
-                model_name="deepseek-coder:6.7b"
-            )
-        ]
-        
-        # Configure evaluation
-        config = EvaluationConfig(
-            domains=["frontend", "backend", "testing"],
-            max_tasks_per_domain=5,
-            include_bigcodebench=True,
-            include_humaneval=True,
-            generate_report=True,
-            save_results=True
-        )
-        
-        # Progress callback
-        def progress(message):
-            print(f"📈 {message}")
-        
-        # Run evaluation
-        print("🚀 Starting comprehensive LLM coding evaluation...")
-        results = await evaluator.evaluate_models(
-            model_configs, config, progress
-        )
-        
-        # Print leaderboard
-        print("\n🏆 LEADERBOARD:")
-        leaderboard = results.get_leaderboard()
-        for entry in leaderboard:
-            print(f"{entry['rank']}. {entry['model_name']}: {entry['overall_score']:.3f}")
-    
-    asyncio.run(main())

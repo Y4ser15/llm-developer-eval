@@ -128,7 +128,7 @@
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <span class="text-sm font-medium text-gray-900">{{ "{:.1%}"|format(entry.pass_rate) }}</span>
+                            <span class="text-sm font-medium text-gray-900">{{ (entry.pass_rate * 100)|round(1) }}%</span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="text-sm text-gray-900">{{ "%.3f"|format(entry.domain_scores.get('frontend', 0)) }}</span>

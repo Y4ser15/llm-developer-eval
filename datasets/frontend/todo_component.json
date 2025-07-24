@@ -1,0 +1,20 @@
+{
+  "task_id": "custom_frontend_001",
+  "title": "Interactive Todo List Component",
+  "description": "Create a React component for managing todos with add, delete, and toggle functionality",
+  "prompt": "Build a TodoList React component that:\n1. Displays a list of todos with checkboxes\n2. Has an input field to add new todos\n3. Allows toggling todo completion status\n4. Includes a delete button for each todo\n5. Shows a count of remaining incomplete todos\n6. Uses modern React hooks (useState, useEffect)\n7. Includes proper CSS styling for a clean UI\n\nRequirements:\n- Component should be functional (not class-based)\n- Use proper state management\n- Include PropTypes or TypeScript types\n- Add basic accessibility features\n- Responsive design for mobile and desktop",
+  "difficulty": "medium",
+  "tags": ["react", "hooks", "state-management", "ui-components"],
+  "expected_technologies": ["React", "JavaScript", "CSS", "HTML"],
+  "evaluation_criteria": [
+    "Component renders correctly",
+    "Add todo functionality works",
+    "Toggle completion works", 
+    "Delete functionality works",
+    "State management is proper",
+    "Code is clean and readable",
+    "Basic styling is present",
+    "Accessibility features included"
+  ],
+  "domain": "frontend"
+}

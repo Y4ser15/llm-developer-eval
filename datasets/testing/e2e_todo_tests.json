@@ -1,0 +1,22 @@
+{
+  "task_id": "custom_testing_001",
+  "title": "E2E Test Suite for Todo Application",
+  "description": "Write comprehensive end-to-end tests for a todo application using Playwright",
+  "prompt": "Create a comprehensive E2E test suite for a todo application using Playwright that covers:\n\n1. User Registration and Login Tests:\n   - Test successful user registration\n   - Test login with valid credentials\n   - Test login with invalid credentials\n   - Test logout functionality\n\n2. Todo Management Tests:\n   - Test adding new todos\n   - Test marking todos as complete/incomplete\n   - Test editing existing todos\n   - Test deleting todos\n   - Test filtering todos (all, active, completed)\n\n3. Data Persistence Tests:\n   - Test that todos persist after page refresh\n   - Test that user session persists\n   - Test data synchronization across browser tabs\n\n4. UI Interaction Tests:\n   - Test responsive design on different screen sizes\n   - Test keyboard navigation and accessibility\n   - Test drag and drop functionality (if available)\n   - Test loading states and error handling\n\nRequirements:\n- Use Playwright testing framework\n- Implement proper page object model pattern\n- Include setup and teardown procedures\n- Add wait strategies for dynamic content\n- Include screenshot capture on test failures\n- Implement test data management\n- Add parallel test execution configuration\n- Include both positive and negative test scenarios\n- Add proper assertions and error messages",
+  "difficulty": "hard",
+  "tags": ["playwright", "e2e-testing", "automation", "page-object-model"],
+  "expected_technologies": ["JavaScript/TypeScript", "Playwright", "Node.js"],
+  "evaluation_criteria": [
+    "All test scenarios are covered",
+    "Page Object Model is implemented correctly",
+    "Tests are reliable and not flaky",
+    "Proper wait strategies are used",
+    "Setup and teardown are implemented",
+    "Test data is managed properly",
+    "Assertions are meaningful and clear",
+    "Code is well-organized and maintainable",
+    "Error handling is comprehensive",
+    "Tests can run in parallel"
+  ],
+  "domain": "testing"
+}

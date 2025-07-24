@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-8">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Evaluation Results</h1>
+            <p class="text-gray-600">Run ID: {{ run_id }}</p>
+            <p class="text-sm text-gray-500">{{ result_data.timestamp }}</p>
+        </div>
+        <div class="flex space-x-3">
+            <a href="/results/{{ run_id }}/report" class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-700 transition duration-200">
+                <i class="fas fa-file-alt mr-2"></i>View Report
+            </a>
+            <a href="/dashboard" class="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50 transition duration-200">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Stats -->
+<div class="grid md:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center">
+            <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
+                <i class="fas fa-robot text-blue-600 text-xl"></i>
+            </div>
+            <div>
+                <div class="text-2xl font-bold text-gray-900">{{ result_data.models|length }}</div>
+                <div class="text-sm text-gray-600">Models Evaluated</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center">
+            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mr-4">
+                <i class="fas fa-tasks text-green-600 text-xl"></i>
+            </div>
+            <div>
+                <div class="text-2xl font-bold text-gray-900">{{ result_data.config.domains|length }}</div>
+                <div class="text-sm text-gray-600">Domains Tested</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center">
+            <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mr-4">
+                <i class="fas fa-clock text-purple-600 text-xl"></i>
+            </div>
+            <div>
+                <div class="text-2xl font-bold text-gray-900">{{ "%.1f"|format(result_data.duration) }}</div>
+                <div class="text-sm text-gray-600">Duration (sec)</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <div class="flex items-center">
+            <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mr-4">
+                <i class="fas fa-check-circle text-orange-600 text-xl"></i>
+            </div>
+            <div>
+                <div class="text-2xl font-bold text-gray-900">{{ result_data.status|title }}</div>
+                <div class="text-sm text-gray-600">Status</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Leaderboard -->
+{% if result_data.leaderboard %}
+<div class="bg-white rounded-lg shadow-md p-6 mb-8">
+    <h2 class="text-xl font-semibold mb-4">Results Leaderboard</h2>
+    <div class="overflow-x-auto">
+        <table class="min-w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Model</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Provider</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Overall Score</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pass Rate</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Frontend</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Backend</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Testing</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for entry in result_data.leaderboard %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            {% if entry.rank == 1 %}
+                            <i class="fas fa-crown text-yellow-500 mr-2"></i>
+                            {% elif entry.rank == 2 %}
+                            <i class="fas fa-medal text-gray-400 mr-2"></i>
+                            {% elif entry.rank == 3 %}
+                            <i class="fas fa-medal text-orange-600 mr-2"></i>
+                            {% endif %}
+                            <span class="text-lg font-bold text-gray-900">{{ entry.rank }}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="font-medium text-gray-900">{{ entry.model_name }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {{ entry.provider }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-lg font-bold text-gray-900">{{ "%.3f"|format(entry.overall_score) }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="text-sm font-medium text-gray-900">{{ (entry.pass_rate * 100)|round(1) }}%</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="text-sm text-gray-900">{{ "%.3f"|format(entry.domain_scores.get('frontend', 0)) }}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="text-sm text-gray-900">{{ "%.3f"|format(entry.domain_scores.get('backend', 0)) }}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="text-sm text-gray-900">{{ "%.3f"|format(entry.domain_scores.get('testing', 0)) }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Model Details -->
+<div class="bg-white rounded-lg shadow-md p-6">
+    <h2 class="text-xl font-semibold mb-4">Model Details</h2>
+    <div class="space-y-6">
+        {% for model in result_data.models %}
+        <div class="border-l-4 border-indigo-500 pl-4">
+            <h3 class="text-lg font-medium text-gray-900 mb-2">{{ model.model_name }}</h3>
+            <div class="grid md:grid-cols-3 gap-4 mb-4">
+                <div>
+                    <span class="text-sm font-medium text-gray-500">Provider:</span>
+                    <span class="ml-2 text-sm text-gray-900">{{ model.provider }}</span>
+                </div>
+                <div>
+                    <span class="text-sm font-medium text-gray-500">Total Tasks:</span>
+                    <span class="ml-2 text-sm text-gray-900">{{ model.summary.total_tasks }}</span>
+                </div>
+                <div>
+                    <span class="text-sm font-medium text-gray-500">Passed Tasks:</span>
+                    <span class="ml-2 text-sm text-gray-900">{{ model.summary.passed_tasks }}</span>
+                </div>
+            </div>
+            
+            <!-- Domain Scores -->
+            <div class="mb-4">
+                <h4 class="text-sm font-medium text-gray-700 mb-2">Domain Performance:</h4>
+                <div class="grid md:grid-cols-3 gap-4">
+                    {% for domain, score in model.summary.domain_scores.items() %}
+                    <div class="bg-gray-50 p-3 rounded">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-medium text-gray-600">{{ domain|title }}</span>
+                            <span class="text-sm font-bold text-gray-900">{{ "%.3f"|format(score) }}</span>
+                        </div>
+                        <div class="mt-2 w-full bg-gray-200 rounded-full h-2">
+                            <div class="bg-indigo-600 h-2 rounded-full" style="width: {{ (score * 100)|round }}%"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            {% if model.errors %}
+            <div class="bg-red-50 border border-red-200 rounded p-3">
+                <h4 class="text-sm font-medium text-red-700 mb-2">Errors:</h4>
+                <ul class="text-sm text-red-600 space-y-1">
+                    {% for error in model.errors %}
+                    <li>• {{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

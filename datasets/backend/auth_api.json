@@ -1,0 +1,20 @@
+{
+  "task_id": "custom_backend_001",
+  "title": "User Authentication API",
+  "description": "Build secure user authentication endpoints with JWT tokens",
+  "prompt": "Create a FastAPI-based user authentication system with the following endpoints:\n\n1. POST /auth/register - User registration\n   - Accept: email, username, password\n   - Validate input (email format, password strength)\n   - Hash password securely\n   - Return: success message and user ID\n\n2. POST /auth/login - User login\n   - Accept: email/username and password\n   - Verify credentials\n   - Generate JWT token\n   - Return: access token and refresh token\n\n3. POST /auth/refresh - Refresh access token\n   - Accept: refresh token\n   - Validate refresh token\n   - Return: new access token\n\n4. GET /auth/profile - Get user profile (protected)\n   - Require valid JWT token\n   - Return: user information (excluding password)\n\nRequirements:\n- Use FastAPI framework\n- Implement proper password hashing (bcrypt)\n- JWT token generation and validation\n- Input validation using Pydantic models\n- Error handling with appropriate HTTP status codes\n- Security best practices (no password in responses)\n- Database integration (SQLite/PostgreSQL)\n- Proper async/await usage",
+  "difficulty": "medium",
+  "tags": ["fastapi", "authentication", "jwt", "security", "api"],
+  "expected_technologies": ["Python", "FastAPI", "JWT", "bcrypt", "SQLAlchemy"],
+  "evaluation_criteria": [
+    "All endpoints implemented correctly",
+    "Password hashing implemented securely",
+    "JWT tokens generated and validated properly",
+    "Input validation works correctly",
+    "Proper error handling and status codes",
+    "Security best practices followed",
+    "Database operations work correctly",
+    "Code is well-structured and readable"
+  ],
+  "domain": "backend"
+}
